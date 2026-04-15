@@ -48,14 +48,25 @@ Membangun infrastruktur data yang mampu menjembatani celah antara rilis berita p
 
 ```mermaid
 graph LR
-  A[Public Data] --> B{Scraper Engine}
-  B --> C[Local Environment]
-  C --> D[Ollama AI Analysis]
-  D --> E[Structured Insights/Excel]
-  E --> F[Policy Recommendation]
+  A[Data Publik] --> B{Mesin Scraper}
+  B --> C[Environment Local]
+  C --> D[Analisis oleh Ollama AI]
+  D --> E[Excel Terstruktur]
+  E --> F[Rekomendasi Kebijakan]
 ```
 
 -----
+
+## Development Roadmap
+Proyek ini akan terus berkembang:
+
+- [x] **Fase 1**: Mesin Scraping Inti (Instagram & News).
+- [x] **Fase 2**: Integrasi AI Lokal (Ollama).
+- [ ] **Fase 3**: Sistem Deteksi Anomali Otomatis.
+- [ ] **Fase 4**: Visualisasi Dashboard (Seaborn/Matplotlib integration).
+
+----
+
 
 ##  Katalog Instrumen Terpadu (Bandung Sentinel Ecosystem)
 
@@ -196,5 +207,7 @@ python src/instagram_scraper.py --target nama_akun_asosiasi
   * Penggunaan perangkat lunak ini ditujukan eksklusif untuk mendukung transparansi dan akuntabilitas sektor publik. Skrip ini tidak dirancang untuk menembus sistem keamanan yang diproteksi, melainkan untuk mengoptimalkan pengawasan data yang tersedia secara publik bagi kepentingan audit negara.
 
 -----
+
+***"In God we trust, all others must bring data." — W. Edwards Deming.***
 
 *Dikembangkan untuk keperluan audit data Badan Pusat Statistik (BPS) Kota Bandung.*
