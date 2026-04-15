@@ -8,6 +8,7 @@ __pycache__/
 *.har
 
 # Folders Data (Struktur & Output)
+/config/
 /instagram\ structure/
 /laporan_tahunan/
 /bol_structure/
