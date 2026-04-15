@@ -1,0 +1,28 @@
+venv/
+__pycache__/
+*.pyc
+.env
+/instagram structure
+/laporan_tahunan
+/bol_structure
+/news structure
+/BPS_Debug_Network.har
+/bps_sentinel_v61.py
+/Laporan_Fenomena_Perdagangan_Bandung.xlsx
+/STPIM.IIADetail 3273 tahun 2023 (2)
+/logs
+/config/Sosial Media Asosiasi-Asosiasi di Bandung.xlsx
+/audit_log.log
+/data
+/data_ekspor.xlsx
+/data_impor.xlsx
+/data_internal_bps.xlsx
+/data_internal_bps_1.xlsx
+/data_internal_bps_2.xlsx
+/Draft_Audit_Ekspor_Bandung.xlsx
+/G4WB_Bandung_Intelligence_Clean.xlsx
+/G4WB_Bandung_Intelligence_Full.xlsx
+/G4WB_Bandung_Precision_Clean.xlsx
+/G4WB_Bandung_Surgical_Fast.xlsx
+/Hasil_Audit_OSINT_Bandung.xlsx
+/Hasil_Automated_Dorking_BPS.xlsx

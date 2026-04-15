@@ -1,0 +1,1053 @@
+const ROLES = {
+  USER: 'user',
+  ASSISTANT: 'assistant'
+};
+
+const ICON = {
+  BOT: '<img src="https://d2oel0jzphnd1z.cloudfront.net/icons/favicon.ico" alt="Bot" style="width:16px;height:16px;" />',
+  USER: '<i class="fa-solid fa-user"></i>'
+};
+
+(function (window, document) {
+  function init() {
+
+    if (window.SupportChatbotAppInitialized) {
+      return;
+    }
+
+    var config = window.SupportChatbotConfig || {};
+    var root = document.getElementById(config.rootId || 'support-chatbot-root');
+
+    if (!root) {
+      return;
+    }
+
+    // Before rendering toggle/panel, verify chatbot is enabled from backend.
+    if (!isChatbotEnabled(config.chatbotStatusUrl || '/support-chatbot/online-status')) {
+      return;
+    }
+
+    window.SupportChatbotAppInitialized = true;
+
+    var state = {
+      countriesLoaded: false,
+      countriesLoading: false,
+      countries: [],
+      chatStarted: false
+    };
+
+    root.innerHTML =
+      '<div class="support-chatbot">' +
+      '<div class="support-chatbot__panel" id="support-chatbot-panel">' +
+      '<div class="support-chatbot__header">' +
+      '<div style="display:flex;">' +
+      '<div class="support-chatbot__header-icon"><img src="https://tawk.link/thumb/a/61f8f29700e15a0c884c1619/profile/SVV_tGYGJD.png?width=48&amp;height=48" alt="Agent profile image"></img></div>' +
+      '<div>' +
+      '<p class="support-chatbot__title">go4WorldBusiness Support Assistant</p>' +
+      '<p class="support-chatbot__subtitle">Powered by AI</p>' +
+      '</div></div>' +
+      '<button type="button" class="support-chatbot__icon-button" id="support-chatbot-close" aria-label="Close chat">-</button>' +
+      '</div>' +
+      '<div class="support-chatbot__body">' +
+      '<div class="support-chatbot__error" id="support-chatbot-error"></div>' +
+      '<div class="support-chatbot__status" id="support-chatbot-status"></div>' +
+      '<div class="support-chatbot__section is-active" id="support-chatbot-prechat">' +
+      '<p class="support-chatbot__help">Ask your question in any language and we\'ll be happy to assist you.</p>' +
+      '<form id="support-chatbot-start-form">' +
+      '<div class="support-chatbot__fields">' +
+
+      '<div class="support-chatbot__field-row">' +
+
+      '<div class="support-chatbot__field">' +
+      '<label class="support-chatbot__label" for="support-chatbot-name">Name</label>' +
+      '<input class="support-chatbot__input" id="support-chatbot-name" name="name" type="text" placeholder="e.g. John" value="" required />' +
+      '</div>' +
+
+      '<div class="support-chatbot__field">' +
+      '<label class="support-chatbot__label" for="support-chatbot-email">Email</label>' +
+      '<input class="support-chatbot__input" id="support-chatbot-email" name="email" type="email" placeholder="e.g. john@gmail.com" value="" required />' +
+      '</div>' +
+
+      '</div>' +
+
+      '<div class="support-chatbot__field-row">' +
+
+      '<div class="support-chatbot__field">' +
+      '<label class="support-chatbot__label" for="support-chatbot-phone">Phone / WhatsApp</label>' +
+      '<input class="support-chatbot__input" id="support-chatbot-phone" name="phone" type="text" placeholder="e.g. +1 415 555 2671" value="" required />' +
+      '</div>' +
+
+      '<div class="support-chatbot__field">' +
+      '<label class="support-chatbot__label" for="support-chatbot-country">Country</label>' +
+      '<select class="support-chatbot__select" id="support-chatbot-country" name="countryId" required>' +
+      '<option value="">Select your country</option>' +
+      '</select>' +
+      '</div>' +
+
+      '</div>' +
+
+      '<div>' +
+      '<label class="support-chatbot__label" for="support-chatbot-question">Your question</label>' +
+      '<textarea class="support-chatbot__textarea" id="support-chatbot-question" name="initialQuery" placeholder="Ask in any language" required></textarea>' +
+      '</div>' +
+
+      '</div>' +
+      '<div class="support-chatbot__actions">' +
+      '<button type="submit" class="support-chatbot__button support-chatbot__button--primary" id="support-chatbot-start-button">Start chat</button>' +
+      '</div>' +
+      '</form>' +
+      '</div>' +
+      '<div class="support-chatbot__section" id="support-chatbot-conversation-section">' +
+      '<div class="support-chatbot__conversation" id="support-chatbot-conversation"></div>' +
+      '<div class="support-chatbot__composer">' +
+      '<input class="support-chatbot__input" id="support-chatbot-message-input" type="text" placeholder="Type your message" />' +
+      '<button type="button" class="support-chatbot__button support-chatbot__button--primary" id="support-chatbot-send-button"><i class="fa-solid fa-paper-plane"></i></button>' +
+      '</div>' +
+      '<div class="support-chatbot__actions" style="margin-bottom: 12px;">' +
+      '<button type="button" class="support-chatbot__button support-chatbot__button--secondary" id="support-chatbot-end-button">End & Email Transcript</button>' +
+      '</div>' +
+      '</div>' +
+      '</div>' +
+      '</div>' +
+      '<button type="button" class="support-chatbot__bubble" id="support-chatbot-toggle" style="font-size: 26px;"><i class="fa-solid fa-comment"></i></button>' +
+      '</div>';
+
+    var panel = document.getElementById('support-chatbot-panel');
+    var toggleButton = document.getElementById('support-chatbot-toggle');
+    var closeButton = document.getElementById('support-chatbot-close');
+    var errorBox = document.getElementById('support-chatbot-error');
+    var statusBox = document.getElementById('support-chatbot-status');
+    var startForm = document.getElementById('support-chatbot-start-form');
+    var startButton = document.getElementById('support-chatbot-start-button');
+    var countrySelect = document.getElementById('support-chatbot-country');
+    var preChatSection = document.getElementById('support-chatbot-prechat');
+    var conversationSection = document.getElementById('support-chatbot-conversation-section');
+    var conversation = document.getElementById('support-chatbot-conversation');
+    var messageInput = document.getElementById('support-chatbot-message-input');
+    var sendButton = document.getElementById('support-chatbot-send-button');
+    var endButton = document.getElementById('support-chatbot-end-button');
+    var nameInput = document.getElementById('support-chatbot-name');
+    var emailInput = document.getElementById('support-chatbot-email');
+    var phoneInput = document.getElementById('support-chatbot-phone');
+    var questionInput = document.getElementById('support-chatbot-question');
+
+    // to maintain the chat between the user and bot
+    var chatHistory = [];
+    var msgId = 0;
+
+    /** 5 minute idle timeout; reset on each sendMessage */
+    var IDLE_CHAT_MS = 5 * 60 * 1000;
+    var idleChatTimeoutId = null;
+    var isActiveSessionLoading = false;
+    var openPanelAfterActiveSessionLoad = false;
+
+    var loggedInUserProfile = null;
+    var defaultToggleHtml = toggleButton.innerHTML;
+
+    // Preload active session data on page load, but keep chatbot panel closed.
+    initializeFromActiveSession();
+
+    toggleButton.addEventListener('click', function () {
+      var isOpen = panel.className.indexOf('is-open') !== -1;
+
+      if (isOpen) {
+        closePanel();
+        return;
+      }
+
+      if (isActiveSessionLoading) {
+        // If preload is in-flight, keep panel closed and open it once data arrives.
+        openPanelAfterActiveSessionLoad = true;
+        return;
+      }
+
+      // Data is already preloaded on init. Opening panel only changes visibility.
+      openPanel();
+    });
+
+    closeButton.addEventListener('click', closePanel);
+
+    startForm.addEventListener('submit', function (event) {
+      event.preventDefault();
+      startChatAction();
+    });
+
+    sendButton.addEventListener('click', sendMessage);
+
+    endButton.addEventListener('click', endChat);
+
+    messageInput.addEventListener('keydown', function (event) {
+      if (event.key === 'Enter') {
+        event.preventDefault();
+        sendMessage();
+      }
+    });
+
+    messageInput.addEventListener('focus', function () {
+      clearIdleChatTimer();
+    });
+
+    messageInput.addEventListener('blur', function () {
+      if (state.chatStarted && !messageInput.disabled) {
+        scheduleIdleChatTimer();
+      }
+    });
+
+    function openPanel() {
+      panel.className = 'support-chatbot__panel is-open';
+      clearFeedback();
+
+      if (!state.countriesLoaded && !state.countriesLoading) {
+        loadCountries();
+      }
+    }
+
+    function initializeFromActiveSession() {
+      isActiveSessionLoading = true;
+      setToggleLoading(true);
+
+      // if no url defined for active session, do nothing
+      if (!config.activeSessionUrl) {
+        isActiveSessionLoading = false;
+        setToggleLoading(false);
+        return;
+      }
+
+      request('GET', config.activeSessionUrl, null, function (response, status) {
+        isActiveSessionLoading = false;
+        setToggleLoading(false);
+
+        // do nothing if response is unavailable
+        if (status < 200 || status >= 300 || !response) {
+          if (openPanelAfterActiveSessionLoad) {
+            openPanelAfterActiveSessionLoad = false;
+            openPanel();
+          }
+          return;
+        }
+
+        // Load countries immediately during preload so country selection works
+        // even before the panel is opened.
+        if (response.countries && response.countries.length) {
+          state.countries = response.countries;
+        } else {
+          state.countries = [];
+        }
+        populateCountries(state.countries || []);
+        state.countriesLoaded = true;
+        state.countriesLoading = false;
+
+        // load the prechat form from loggedin user details
+        if (response.loggedInUser) {
+          loggedInUserProfile = response.loggedInUser;
+          applyLoggedInUserToPrechatForm(response.loggedInUser);
+        } else {
+          loggedInUserProfile = null;
+          setPrechatFieldsDisabled(false);
+        }
+
+        // restore the chat history and user details from session
+        if (response.hasActiveSession && response.sessionData) {
+          restoreChatFromSession(response.sessionData);
+        }
+
+        if (openPanelAfterActiveSessionLoad) {
+          openPanelAfterActiveSessionLoad = false;
+          openPanel();
+        }
+      });
+    }
+
+    /**
+     * Set country select after options exist; falls back to case-insensitive match on value/label.
+     * @param {string} raw
+     */
+    function selectCountryInDropdown(raw) {
+      if (!raw || !countrySelect.options || countrySelect.options.length < 1) {
+        return;
+      }
+      var v = String(raw).trim();
+      countrySelect.value = v;
+      if (countrySelect.value === v) {
+        // if already selected, return
+        return;
+      }
+      var lower = v.toLowerCase();
+      var i;
+      var opt;
+
+      for (i = 0; i < countrySelect.options.length; i += 1) {
+        opt = countrySelect.options[i];
+        if (opt.value && String(opt.value).trim().toLowerCase() === lower) {
+          countrySelect.selectedIndex = i;
+          return;
+        }
+      }
+    }
+
+    function setPrechatFieldsDisabled(disabled) {
+      // special trick to set truthful value of true/false by putting !!
+      nameInput.disabled = !!disabled;
+      emailInput.disabled = !!disabled;
+      phoneInput.disabled = !!disabled;
+      countrySelect.disabled = !!disabled;
+    }
+
+    function applyLoggedInUserToPrechatForm(profile) {
+      if (!profile) {
+        // do nothing
+        return;
+      }
+      if (profile.name) {
+        nameInput.value = profile.name;
+      }
+      if (profile.email) {
+        emailInput.value = profile.email;
+      }
+      if (profile.phone) {
+        phoneInput.value = profile.phone;
+      }
+      if (profile.country) {
+        selectCountryInDropdown(profile.country);
+      }
+      setPrechatFieldsDisabled(true);
+    }
+
+    function setToggleLoading(isLoading) {
+      if (isLoading) {
+        toggleButton.disabled = true;
+        toggleButton.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
+        return;
+      }
+
+      toggleButton.disabled = false;
+      toggleButton.innerHTML = defaultToggleHtml;
+    }
+
+    function restoreChatFromSession(sessionData) {
+      if (!sessionData || !sessionData.chatHistory || !sessionData.chatHistory.length) {
+        return;
+      }
+
+      chatHistory = [];
+      msgId = 0;
+      conversation.innerHTML = '';
+
+      if (sessionData.name) {
+        nameInput.value = sessionData.name;
+      }
+      if (sessionData.email) {
+        emailInput.value = sessionData.email;
+      }
+      if (sessionData.phone) {
+        phoneInput.value = sessionData.phone;
+      }
+      if (sessionData.country) {
+        selectCountryInDropdown(sessionData.country);
+      }
+
+      var greeting = `Hi ${sessionData.name}! 👋 Thanks for reaching out. I'm here to help you with your Go4WorldBusiness queries.\n\nYou mentioned: *"${sessionData.chatHistory[0].content}"*\n\nLet me assist you with that right away!`;
+
+      // changing the first message of user to greeting from chatbot
+      appendMessage(greeting, ROLES.ASSISTANT);
+
+      var i;
+      var entry;
+      var sender;
+      for (i = 1; i < sessionData.chatHistory.length; i += 1) {
+        entry = sessionData.chatHistory[i];
+        if (!entry || typeof entry.content !== 'string') {
+          continue;
+        }
+
+        sender = entry.role === ROLES.USER ? ROLES.USER : ROLES.ASSISTANT;
+        appendMessage(entry.content, sender);
+      }
+
+      state.chatStarted = true;
+      preChatSection.className = 'support-chatbot__section';
+      conversationSection.className = 'support-chatbot__section is-active';
+      scheduleIdleChatTimer();
+    }
+
+    function clearIdleChatTimer() {
+      if (idleChatTimeoutId !== null) {
+        clearTimeout(idleChatTimeoutId);
+        idleChatTimeoutId = null;
+      }
+    }
+
+    function scheduleIdleChatTimer() {
+      clearIdleChatTimer();
+      if (!state.chatStarted) {
+        return;
+      }
+      if (document.activeElement === messageInput) {
+        return;
+      }
+      idleChatTimeoutId = setTimeout(onIdleChatTimeout, IDLE_CHAT_MS);
+    }
+
+    function onIdleChatTimeout() {
+      idleChatTimeoutId = null;
+      if (!state.chatStarted) {
+        return;
+      }
+
+      var idleUrl = config.endChatUrl;
+      if (!idleUrl) {
+        resetChat();
+        showStatus('Chat ended. Please start a new chat to continue.');
+        return;
+      }
+
+      var payload = {
+        name: nameInput.value,
+        email: emailInput.value,
+        phone: phoneInput.value,
+        countryName: countrySelect.value,
+        messages: chatHistory
+      };
+
+      request('POST', idleUrl, payload, function (response, status) {
+        if (status < 200 || status >= 300) {
+          showError(extractMessage(response) || 'Unable to end the chat session.');
+        } else {
+          showStatus('Chat ended. Please start a new chat to continue.');
+        }
+        resetChat();
+      });
+    }
+
+    function closePanel() {
+      panel.className = 'support-chatbot__panel';
+      clearFeedback();
+    }
+
+    function loadCountries() {
+      state.countriesLoading = true;
+      showStatus('Loading countries...');
+      populateCountries(state.countries || []);
+      state.countriesLoaded = true;
+      state.countriesLoading = false;
+      hideStatus();
+    }
+
+    function populateCountries(countries) {
+      var options = ['<option value="">Select your country</option>'];
+      var index;
+      var country;
+
+      for (index = 0; index < countries.length; index += 1) {
+        country = countries[index];
+        options.push(
+          '<option value="' + escapeHtml(String(country.name)) + '">' +
+          escapeHtml(country.name) +
+          '</option>'
+        );
+      }
+
+      countrySelect.innerHTML = options.join('');
+    }
+
+    function startChatAction() {
+      clearFeedback();
+
+      var username = nameInput.value;
+      var userEmail = emailInput.value;
+      var userPhone = phoneInput.value;
+      var userCountry = countrySelect.value;
+      var payload = {
+        name: username,
+        email: userEmail,
+        phone: userPhone,
+        countryName: userCountry
+      };
+
+      var initialQuery = questionInput.value;
+      startButton.disabled = true;
+      startButton.innerHTML = 'Starting...';
+
+
+
+      payload.messages = [{ role: ROLES.USER, content: initialQuery }];
+      payload.messageIndex = msgId;
+
+      request('POST', config.startChatUrl, payload, function (response, status) {
+        startButton.disabled = false;
+        startButton.innerHTML = 'Start chat';
+
+        if (status < 200 || status >= 300) {
+          showError(extractMessage(response) || 'Unable to start the chat right now. Please try again later.');
+          return;
+        }
+
+        state.chatStarted = true;
+        preChatSection.className = 'support-chatbot__section';
+        conversationSection.className = 'support-chatbot__section is-active';
+        conversation.innerHTML = '';
+
+
+        var greeting = `Hi ${username}! 👋 Thanks for reaching out. I'm here to help you with your Go4WorldBusiness queries.\n\nYou mentioned: *"${initialQuery}"*\n\nLet me assist you with that right away!`;
+
+        appendMessage(greeting, ROLES.ASSISTANT);
+
+        var ai_reply = extractMessage(response);
+        if (ai_reply) {
+          appendMessage(ai_reply, ROLES.ASSISTANT);
+          messageInput.focus();
+        } else {
+          showError('Unable to start the chat right now. Please try again later.');
+        }
+
+        scheduleIdleChatTimer();
+      });
+    }
+
+    function fmt(t) {
+      // parser to parse the reply of ai to markdown format
+      return t
+        .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+        .replace(/\*(.*?)\*/g, '<em>$1</em>')
+        .replace(/`([^`]+)`/g, '<code>$1</code>')
+        .replace(/\n/g, '<br>');
+    }
+
+    function sendMessage() {
+      clearFeedback();
+
+      if (!state.chatStarted) {
+        showError('Please type your query.');
+        return;
+      }
+
+      var message = messageInput.value;
+
+
+      if (!message || !trim(message)) {
+        // do nothing if nothing typed
+        return;
+      }
+
+      clearIdleChatTimer();
+
+      sendButton.disabled = true;
+      messageInput.disabled = true;
+
+      appendMessage(message, ROLES.USER);
+
+      var messageIndex = msgId - 1;
+      showTypingIndicator();
+      messageInput.value = '';
+
+      request('POST', config.messageUrl, {
+        messages: chatHistory,
+        messageIndex: messageIndex
+      }, function (response, status) {
+        sendButton.disabled = false;
+        messageInput.disabled = false;
+        hideTypingIndicator();
+
+        if (status < 200 || status >= 300) {
+          showError(extractMessage(response) || 'Unable to send your message right now.');
+          if (state.chatStarted) {
+            scheduleIdleChatTimer();
+          }
+          return;
+        }
+
+        if (extractMessage(response)) {
+          appendMessage(extractMessage(response), ROLES.ASSISTANT);
+        } else {
+          showError('Something went wrong. Please try again later.');
+        }
+
+        if (state.chatStarted) {
+          scheduleIdleChatTimer();
+        }
+      });
+    }
+
+    function endChat() {
+      clearFeedback();
+      clearIdleChatTimer();
+
+      var userEmail = emailInput.value;
+      var payload = {
+        name: nameInput.value,
+        email: userEmail,
+        phone: phoneInput.value,
+        countryName: countrySelect.value,
+        messages: chatHistory
+      };
+      endButton.disabled = true;
+      endButton.innerHTML = 'Sending transcripts...';
+
+      request('POST', config.endChatUrl, payload, function (response, status) {
+        endButton.disabled = false;
+        endButton.innerHTML = 'End & Email Transcript';
+
+        if (status < 200 || status >= 300) {
+          showError(extractMessage(response) || 'Unable to end the chat right now.');
+          return;
+        }
+
+        resetChat();
+        
+        showStatus('Chat ended. Transcript sent successfully to your email as well.');
+      });
+    }
+
+    function resetChat() {
+      clearIdleChatTimer();
+      state.chatStarted = false;
+      chatHistory = [];
+      conversation.innerHTML = '';
+      preChatSection.className = 'support-chatbot__section is-active';
+      conversationSection.className = 'support-chatbot__section';
+
+      if (loggedInUserProfile) {
+        // restore the user details from loggedin user profile
+        nameInput.value = loggedInUserProfile.name || '';
+        emailInput.value = loggedInUserProfile.email || '';
+        phoneInput.value = loggedInUserProfile.phone || '';
+        selectCountryInDropdown(loggedInUserProfile.country || '');
+        questionInput.value = '';
+        setPrechatFieldsDisabled(true);
+      } else {
+        // default to empty values
+        startForm.reset();
+        setPrechatFieldsDisabled(false);
+      }
+    }
+
+    function appendMessage(text, sender) {
+      // capture before increment
+      var currentId = msgId;
+
+      var container = document.createElement('div');
+      container.className = 'support-chatbot__message-container support-chatbot__message-container--' + sender;
+
+      var wrapper = document.createElement('div');
+      wrapper.className = 'support-chatbot__message-row support-chatbot__message-row--' + sender;
+
+      var message = document.createElement('div');
+      message.className = 'support-chatbot__message support-chatbot__message--' + sender;
+      message.id = 'support-chatbot-message-' + currentId;
+      message.innerHTML = fmt(text);
+
+      var icon = document.createElement('div');
+      icon.className = sender === ROLES.USER
+        ? 'support-chatbot__icon support-chatbot__icon--user'
+        : 'support-chatbot__icon';
+      icon.innerHTML = sender === ROLES.USER
+        ? ICON.USER
+        : ICON.BOT;
+
+      if (sender === ROLES.USER) {
+        wrapper.appendChild(message);
+        wrapper.appendChild(icon);
+      } else {
+        wrapper.appendChild(icon);
+        wrapper.appendChild(message);
+      }
+
+      // Timestamp
+      var meta = document.createElement('div');
+      meta.className = 'support-chatbot__meta';
+      meta.innerText = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+      container.appendChild(wrapper);
+      container.appendChild(meta);
+
+      // Feedback section ONLY for bot
+      if (sender === ROLES.ASSISTANT) {
+        var feedback = document.createElement('div');
+        feedback.className = 'support-chatbot__feedback';
+        feedback.id = 'support-chatbot-feedback-' + currentId;
+
+        feedback.innerHTML = `
+                    Helpful?
+                    <button class="fb-btn fb-yes" onclick="handleFbYes(${currentId})" id="fb-yes-${currentId}"><i class="fa-solid fa-thumbs-up" style=" color: var(--green);"></i> Yes</button>
+                    <button class="fb-btn fb-no" onclick="handleFbNo(${currentId})" id="fb-no-${currentId}"><i class="fa-solid fa-thumbs-down" style=" color: var(--red);"></i> No</button>
+                `;
+
+        container.appendChild(feedback);
+      }
+
+      conversation.appendChild(container);
+      if (sender === ROLES.ASSISTANT) {
+        // Keep the newly added assistant message anchored near the top of the visible scroll area.
+        message.scrollIntoView({ block: 'start', behavior: 'smooth' });
+      } else {
+        conversation.scrollTop = conversation.scrollHeight;
+      }
+
+      msgId++;
+
+      chatHistory.push({ role: sender, content: text });
+    }
+
+    function showTypingIndicator() {
+      hideTypingIndicator();
+
+      var container = document.createElement('div');
+      container.className = 'support-chatbot__message-container support-chatbot__message-container--assistant support-chatbot__typing';
+      container.id = 'support-chatbot-typing-indicator';
+
+      var wrapper = document.createElement('div');
+      wrapper.className = 'support-chatbot__message-row support-chatbot__message-row--assistant';
+
+      var icon = document.createElement('div');
+      icon.className = 'support-chatbot__icon';
+      icon.innerHTML = ICON.BOT;
+
+      var message = document.createElement('div');
+      message.className = 'support-chatbot__message support-chatbot__message--assistant';
+      message.innerHTML = 'typing...';
+
+      wrapper.appendChild(icon);
+      wrapper.appendChild(message);
+      container.appendChild(wrapper);
+
+      conversation.appendChild(container);
+      conversation.scrollTop = conversation.scrollHeight;
+    }
+
+    function hideTypingIndicator() {
+      var indicator = document.getElementById('support-chatbot-typing-indicator');
+      if (indicator && indicator.parentNode) {
+        indicator.parentNode.removeChild(indicator);
+      }
+    }
+
+    window.handleFbNo = function (id) {
+
+      var feedback = document.getElementById('support-chatbot-feedback-' + id);
+      if (!feedback) return;
+
+      userName = nameInput.value,
+        email = emailInput.value,
+        phone = phoneInput.value,
+        countryName = countrySelect.value;
+      // Remove feedback permanently
+      feedback.remove();
+
+      // Create escalation form container
+      var formContainer = document.createElement('div');
+      formContainer.className = 'support-chatbot__escalation';
+      formContainer.id = 'support-chatbot-escalation-' + id;
+
+      formContainer.innerHTML = `
+                <div class="support-chatbot__escalation-title">🙋 Connect with our support team</div>
+                <div class="support-chatbot__escalation-subtitle">
+                    Sorry the answer wasn't helpful. Fill in your details and a support agent will get back to you.
+                </div>
+        
+                <div class="support-chatbot__field-row">
+                    <div class="support-chatbot__esc-input-field">
+                        <input type="text" placeholder="Name" id="esc-name-${id}" value="${userName}" />
+                        <input type="text" placeholder="Phone" id="esc-phone-${id}" value="${phone}" />
+                    </div>
+                </div>
+                <div class="support-chatbot__esc-input-field" >
+                    <input type="email" placeholder="Email" id="esc-email-${id}" value="${email}" style="width:98%;" />
+                </div>
+
+                <input type="hidden" id="esc-country-${id}" value="${countryName}" />
+                <div class="support-chatbot__esc-input-field" style="margin-bottom:10px;">
+                    <div class="support-chatbot__problem-options" id="esc-reason-${id}">
+                        <button type="button" class="esc-btn" data-value="Incorrect answer">Incorrect answer</button>
+                        <button type="button" class="esc-btn" data-value="Missing Information">Missing Information</button>
+                        <button type="button" class="esc-btn" data-value="Technical Issue">Technical Issue</button>
+                        <button type="button" class="esc-btn" data-value="Account Problem">Account Problem</button>
+                        <button type="button" class="esc-btn" data-value="Payment Issue">Payment Issue</button>
+                        <button type="button" class="esc-btn" data-value="Other">Other</button>
+                    </div>
+                </div>
+        
+                <div class="support-chatbot__esc-input-field">
+                    <textarea placeholder="Describe your issue..." id="esc-desc-${id}"></textarea>
+                </div>
+        
+                <div>
+                    <button class="support-chatbot__button support-chatbot__button--primary" id="esc-submit-${id}">
+                        Request Human Support
+                    </button>
+                    <button class="support-chatbot__button support-chatbot__button--secondary" id="esc-cancel-${id}">
+                        Cancel
+                    </button>
+                </div>
+            `;
+
+      // Append after message container
+      var container = document.getElementById('support-chatbot-message-' + id)?.parentElement?.parentElement;
+      if (container) {
+        container.appendChild(formContainer);
+      }
+      var buttons = formContainer.querySelectorAll('.esc-btn');
+
+      buttons.forEach(function (btn) {
+        btn.addEventListener('click', function () {
+          btn.classList.toggle('active');
+        });
+      });
+
+      // Handle Submit
+      document.getElementById('esc-submit-' + id).addEventListener('click', function () {
+        submitEscForm(id);
+      });
+
+      //  Handle Cancel
+      document.getElementById('esc-cancel-' + id).addEventListener('click', function () {
+        formContainer.remove();
+      });
+    };
+
+
+    window.handleFbYes = function (id) {
+      var feedback = document.getElementById('support-chatbot-feedback-' + id);
+      var fbYes = document.getElementById('fb-yes-' + id);
+      if (!feedback || !fbYes) return;
+
+      // Change UI
+      fbYes.innerHTML = 'Glad it helped!';
+
+      // Disable further clicks (by removing buttons)
+      feedback.classList.add('disabled');
+
+      // hit backend for logging the happy feedback
+      sendHappyFeedback(id);
+    };
+
+    function sendHappyFeedback(messageId) {
+      if (!config.feedbackYesUrl) {
+        // do nothing if no url defined for happy feedback logging
+        return;
+      }
+
+      var aiReply = getMessageTextById(messageId);
+      var userQuery = getPreviousUserMessageText(messageId);
+
+      request('POST', config.feedbackYesUrl, {
+        userQuery: userQuery,
+        aiReply: aiReply
+      }, function () { });
+    }
+
+    function getMessageTextById(messageId) {
+      var messageNode = document.getElementById('support-chatbot-message-' + messageId);
+      if (!messageNode) {
+        return '';
+      }
+
+      return trim(messageNode.textContent || '');
+    }
+
+    function getPreviousUserMessageText(messageId) {
+      var currentId = Number(messageId);
+      var messageNode;
+      var classes;
+
+      // Try to find the immediately previous user message
+      while (currentId >= 0) {
+        currentId -= 1;
+        messageNode = document.getElementById('support-chatbot-message-' + currentId);
+
+        if (!messageNode) {
+          continue;
+        }
+
+        classes = messageNode.className || '';
+        if (classes.indexOf('support-chatbot__message--user') !== -1) {
+          return trim(messageNode.textContent || '');
+        }
+      }
+
+      // fallback to first message in chat history
+      return chatHistory.length > 0 ? chatHistory[0].content : '';
+    }
+
+    window.submitEscForm = function (id) {
+      var payload = {
+        messageId: id,
+        name: document.getElementById('esc-name-' + id).value,
+        email: document.getElementById('esc-email-' + id).value,
+        phone: document.getElementById('esc-phone-' + id).value,
+        reason: joinIssuesWithAIResponse(id),
+        description: document.getElementById('esc-desc-' + id).value,
+        countryName: document.getElementById('esc-country-' + id).value,
+        userQuery: getPreviousUserMessageText(id),
+        aiReply: getMessageTextById(id),
+        chatHistory: chatHistory
+      };
+
+      request('POST', config.submitEscFormUrl, payload, function (response, status) {
+
+        formContainer = document.getElementById('support-chatbot-escalation-' + id);
+        if (!formContainer) return;
+        if (status === 200) {
+          // Success UI
+          formContainer.innerHTML = `
+                        <div class="esc-success">
+                            <span style="font-size:22px">✅</span>
+                            <div>
+                                <strong>Request sent!</strong> Our support team will contact you at 
+                                <strong>${payload.email}</strong> shortly.<br>
+                                Or call us: India <strong>1800-114-649</strong> | USA <strong>+1-833-752-7161</strong>
+                            </div>
+                        </div>
+                    `;
+          formContainer.classList.remove('support-chatbot__escalation');
+        } else {
+          // Failure UI
+          var errorMessage = (response && response.message)
+            ? response.message
+            : 'Failed to submit your request. Please try again.';
+
+          formContainer.innerHTML = `
+                        <div class="esc-error" style="color:red;">
+                            <span style="font-size:20px">❌</span>
+                            <div>
+                                <strong>Submission failed.</strong><br>
+                                ${errorMessage}
+                            </div>
+                            <div style="margin-top:8px;">
+                                <button onclick="handleFbNo(${id})" class="support-chatbot__button">
+                                    Retry
+                                </button>
+                            </div>
+                        </div>
+                    `;
+          formContainer.classList.remove('support-chatbot__escalation');
+        }
+
+        // Scroll to bottom
+        document.getElementById('support-chatbot-conversation').scrollTop = 99999;
+      });
+    }
+
+    function joinIssuesWithAIResponse(id) {
+      const container = document.getElementById('esc-reason-' + id);
+      if (!container) return [];
+
+      const selectedButtons = container.querySelectorAll('.esc-btn.active');
+
+      return Array.from(selectedButtons).map(btn => btn.getAttribute('data-value'));
+    }
+
+    function request(method, url, payload, callback) {
+      var xhr = new XMLHttpRequest();
+
+      xhr.open(method, url, true);
+      xhr.setRequestHeader('Accept', 'application/json');
+
+      if (method !== 'GET') {
+        xhr.setRequestHeader('Content-Type', 'application/json');
+      }
+
+      xhr.onreadystatechange = function () {
+        if (xhr.readyState !== 4) {
+          return;
+        }
+
+        var response = null;
+
+        try {
+          response = xhr.responseText ? JSON.parse(xhr.responseText) : {};
+        } catch (e) {
+          response = {
+            message: xhr.responseText || 'Unexpected response from support chatbot.'
+          };
+        }
+
+        callback(response, xhr.status);
+      };
+
+      xhr.send(payload ? JSON.stringify(payload) : null);
+    }
+
+    function extractMessage(response) {
+      if (!response) {
+        return '';
+      }
+
+      if (typeof response.reply === 'string' && trim(response.reply)) {
+        return trim(response.reply);
+      }
+
+      if (typeof response.message === 'string' && trim(response.message)) {
+        return trim(response.message);
+      }
+
+      if (response.data && typeof response.data.reply === 'string' && trim(response.data.reply)) {
+        return trim(response.data.reply);
+      }
+
+      if (response.data && typeof response.data.message === 'string' && trim(response.data.message)) {
+        return trim(response.data.message);
+      }
+
+      return '';
+    }
+
+    function showError(message) {
+      errorBox.innerHTML = message;
+      errorBox.style.display = 'block';
+      statusBox.style.display = 'none';
+    }
+
+    function showStatus(message) {
+      statusBox.innerHTML = message;
+      statusBox.style.display = 'block';
+      errorBox.style.display = 'none';
+    }
+
+    function hideStatus() {
+      statusBox.style.display = 'none';
+    }
+
+    function clearFeedback() {
+      errorBox.style.display = 'none';
+      statusBox.style.display = 'none';
+    }
+
+    function trim(value) {
+      return String(value).replace(/^\s+|\s+$/g, '');
+    }
+
+    function escapeHtml(value) {
+      return String(value)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+    }
+
+    function isChatbotEnabled(statusUrl) {
+      try {
+        var xhr = new XMLHttpRequest();
+        xhr.open('GET', statusUrl, false);
+        xhr.setRequestHeader('Accept', 'application/json');
+        xhr.send(null);
+
+        if (xhr.status < 200 || xhr.status >= 300) {
+          return false;
+        }
+
+        var response = xhr.responseText ? JSON.parse(xhr.responseText) : null;
+        return !!(response && response.success === true && response.isActive === true);
+      } catch (e) {
+        return false;
+      }
+    }
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init);
+  } else {
+    // DOM already loaded (in case script is injected late)
+    init();
+  }
+})(window, document);

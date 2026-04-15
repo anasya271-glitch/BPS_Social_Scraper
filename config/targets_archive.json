@@ -1,0 +1,243 @@
+{
+    "targets": [
+        {
+            "username": "partaiburuh_kotabandung",
+            "category": "Partai Politik",
+            "priority": "high",
+            "expected_activities": ["kampanye_fundraising", "realisasi_pengeluaran", "laporan_institusional"]
+        },
+        {
+            "username": "gelorakotabandung",
+            "category": "Partai Politik",
+            "priority": "high",
+            "expected_activities": ["kampanye_fundraising", "realisasi_pengeluaran", "laporan_institusional"]
+        },
+        {
+            "username": "pkn_jabar",
+            "category": "Partai Politik",
+            "priority": "high",
+            "expected_activities": ["kampanye_fundraising", "realisasi_pengeluaran", "laporan_institusional"]
+        },
+        {
+            "username": "perindojabar",
+            "category": "Partai Politik",
+            "priority": "high",
+            "expected_activities": ["kampanye_fundraising", "realisasi_pengeluaran", "laporan_institusional"]
+        },
+        {
+            "username": "hanurajabar",
+            "category": "Partai Politik",
+            "priority": "high",
+            "expected_activities": ["kampanye_fundraising", "realisasi_pengeluaran", "laporan_institusional"]
+        },
+        {
+            "username": "ppp_kotabandung",
+            "category": "Partai Politik",
+            "priority": "high",
+            "expected_activities": ["kampanye_fundraising", "realisasi_pengeluaran", "laporan_institusional"]
+        },
+        {
+            "username": "pankotabandung",
+            "category": "Partai Politik",
+            "priority": "high",
+            "expected_activities": ["kampanye_fundraising", "realisasi_pengeluaran", "laporan_institusional"]
+        },
+        {
+            "username": "pksbandung",
+            "category": "Partai Politik",
+            "priority": "high",
+            "expected_activities": ["kampanye_fundraising", "realisasi_pengeluaran", "laporan_institusional"]
+        },
+        {
+            "username": "perindojabar",
+            "category": "Partai Politik",
+            "priority": "high",
+            "expected_activities": ["kampanye_fundraising", "realisasi_pengeluaran", "laporan_institusional"]
+        },
+        {
+            "username": "pkb_bandung",
+            "category": "Partai Politik",
+            "priority": "high",
+            "expected_activities": ["kampanye_fundraising", "realisasi_pengeluaran", "laporan_institusional"]
+        },
+        {
+            "username": "pdiperjuangankotabandung",
+            "category": "Partai Politik",
+            "priority": "high",
+            "expected_activities": ["kampanye_fundraising", "realisasi_pengeluaran", "laporan_institusional"]
+        },
+        {
+            "username": "gerindra.kotabandung",
+            "category": "Partai Politik",
+            "priority": "high",
+            "expected_activities": ["kampanye_fundraising", "realisasi_pengeluaran", "laporan_institusional"]
+        },
+        {
+            "username": "psi.kotabandung",
+            "category": "Partai Politik",
+            "priority": "high",
+            "expected_activities": ["kampanye_fundraising", "realisasi_pengeluaran", "laporan_institusional"]
+        },
+        {
+            "username": "demokratjabar",
+            "category": "Partai Politik",
+            "priority": "high",
+            "expected_activities": ["kampanye_fundraising", "realisasi_pengeluaran", "laporan_institusional"]
+        },
+        {
+            "username": "demokratjabar",
+            "category": "Partai Politik",
+            "priority": "high",
+            "expected_activities": ["kampanye_fundraising", "realisasi_pengeluaran", "laporan_institusional"]
+        },
+        {
+            "username": "partaigolkarbandung",
+            "category": "Partai Politik",
+            "priority": "high",
+            "expected_activities": ["kampanye_fundraising", "realisasi_pengeluaran", "laporan_institusional"]
+        },
+        {
+            "username": "rumahzakat",
+            "category": "Organisasi Penggalangan Dana & Amal",
+            "priority": "high",
+            "expected_activities": ["kampanye_fundraising", "realisasi_pengeluaran", "laporan_institusional"]
+        },
+        {
+            "username": "dtpeduli",
+            "category": "Organisasi Penggalangan Dana & Amal (Community Based)",
+            "priority": "high",
+            "expected_activities": ["kampanye_fundraising", "realisasi_pengeluaran", "manajemen_relawan"]
+        },
+        {
+            "username": "lsmgmbiksmbandungkulon1",
+            "category": "LSM / NGO",
+            "priority": "medium",
+            "expected_activities": ["advokasi_kebijakan", "laporan_institusional", "publikasi_riset"]
+        },
+        {
+            "username": "lsm_prabu.bandung",
+            "category": "LSM / NGO",
+            "priority": "medium",
+            "expected_activities": ["advokasi_kebijakan", "laporan_institusional", "publikasi_riset"]
+        },
+        {
+            "username": "kampoengbelajar",
+            "category": "LSM / NGO",
+            "priority": "medium",
+            "expected_activities": ["advokasi_kebijakan", "laporan_institusional", "publikasi_riset"]
+        },
+                {
+            "username": "lpa.jabar",
+            "category": "LSM / NGO",
+            "priority": "high",
+            "expected_activities": ["advokasi_kebijakan", "laporan_institusional", "publikasi_riset"]
+        },
+        {
+            "username": "kophijawabarat",
+            "category": "LSM / NGO",
+            "priority": "medium",
+            "expected_activities": ["advokasi_kebijakan", "laporan_institusional", "publikasi_riset"]
+        },
+        {
+            "username": "relawan.bangsa",
+            "category": "Perkumpulan/Asosiasi (Volunteer Movement)",
+            "priority": "medium",
+            "expected_activities": ["manajemen_relawan", "realisasi_pengeluaran", "kemitraan_strategis"]
+        },
+        {
+            "username": "yayasanpenakaryaharmonis",
+            "category": "Yayasan",
+            "priority": "medium",
+            "expected_activities": ["manajemen_relawan", "realisasi_pengeluaran", "kemitraan_strategis"]
+        },
+        {
+            "username": "yapkapora.official",
+            "category": "Yayasan",
+            "priority": "medium",
+            "expected_activities": ["manajemen_relawan", "realisasi_pengeluaran", "kemitraan_strategis"]
+        },
+        {
+            "username": "yair.indonesia",
+            "category": "Yayasan",
+            "priority": "medium",
+            "expected_activities": ["manajemen_relawan", "realisasi_pengeluaran", "kemitraan_strategis"]
+        },
+        {
+            "username": "yayasan.budiluhur",
+            "category": "Yayasan",
+            "priority": "medium",
+            "expected_activities": ["manajemen_relawan", "realisasi_pengeluaran", "kemitraan_strategis"]
+        },
+        {
+            "username": "bringincommunal",
+            "category": "Yayasan",
+            "priority": "medium",
+            "expected_activities": ["manajemen_relawan", "realisasi_pengeluaran", "kemitraan_strategis"]
+        },
+        {
+            "username": "explorehumanity.id",
+            "category": "Yayasan",
+            "priority": "medium",
+            "expected_activities": ["manajemen_relawan", "realisasi_pengeluaran", "kemitraan_strategis"]
+        },
+        {
+            "username": "amalproduktif",
+            "category": "Yayasan",
+            "priority": "medium",
+            "expected_activities": ["manajemen_relawan", "realisasi_pengeluaran", "kemitraan_strategis"]
+        },
+        {
+            "username": "national_ocean",
+            "category": "LSM / NGO",
+            "priority": "medium",
+            "expected_activities": ["manajemen_relawan", "realisasi_pengeluaran", "kemitraan_strategis"]
+        },
+        {
+            "username": "lokahita.info",
+            "category": "Yayasan",
+            "priority": "medium",
+            "expected_activities": ["manajemen_relawan", "realisasi_pengeluaran", "kemitraan_strategis"]
+        },
+        {
+            "username": "lbhbandung",
+            "category": "LSM / NGO",
+            "priority": "high",
+            "expected_activities": ["manajemen_relawan", "realisasi_pengeluaran", "kemitraan_strategis"]
+        },
+        {
+            "username": "relawan.nusantara",
+            "category": "LSM / NGO",
+            "priority": "high",
+            "expected_activities": ["manajemen_relawan", "realisasi_pengeluaran", "kemitraan_strategis"]
+        },
+        {
+            "username": "relawan.bangsa",
+            "category": "Perkumpulan/Asosiasi (Volunteer Movement)",
+            "priority": "medium",
+            "expected_activities": ["manajemen_relawan", "realisasi_pengeluaran", "kemitraan_strategis"]
+        },
+        {
+            "username": "lazismu_bdg",
+            "category": "Perkumpulan/Asosiasi (Volunteer Movement)",
+            "priority": "medium",
+            "expected_activities": ["manajemen_relawan", "realisasi_pengeluaran", "kemitraan_strategis"]
+        },
+        {
+            "username": "idi_indonesia",
+            "category": "Perkumpulan/Asosiasi",
+            "priority": "high",
+            "expected_activities": ["laporan_institusional", "manajemen_relawan", "kemitraan_strategis"]
+        },
+        {
+            "username": "walhi.nasional",
+            "category": "LSM / NGO",
+            "priority": "high",
+            "expected_activities": ["advokasi_kebijakan", "laporan_institusional", "publikasi_riset"]
+        }
+    ],
+    "scraper_settings": {
+        "max_posts_per_account": 50,
+        "headless_mode": true,
+        "delay_between_requests_seconds": [3, 7]
+    }
+}

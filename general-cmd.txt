@@ -1,0 +1,13 @@
+activating venv = .\venv\Scripts\Activate.ps1
+
+running scraper = python src/scraper.py
+running news scraper =  python src/news_scraper.py --mode history --start 2026-01-01 --end 2026-04-07
+running llama_scraper = python src/llama_scraper.py --mode history --start 2026-03-01 --end 2026-04-13
+reset process = python src/scraper.py --reset
+
+        {
+            "username": "partaiburuh_kotabandung",
+            "category": "Partai Politik",
+            "priority": "high",
+            "expected_activities": ["kampanye_fundraising", "realisasi_pengeluaran", "laporan_institusional"]
+        },

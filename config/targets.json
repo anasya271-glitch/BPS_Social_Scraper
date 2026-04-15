@@ -1,0 +1,27 @@
+{
+    "targets": [
+        {
+            "username": "pdiperjuangankotabandung",
+            "category": "Partai Politik",
+            "priority": "high",
+            "expected_activities": ["kampanye_fundraising", "realisasi_pengeluaran", "laporan_institusional"]
+        },
+        {
+            "username": "perindojabar",
+            "category": "Partai Politik",
+            "priority": "high",
+            "expected_activities": ["kampanye_fundraising", "realisasi_pengeluaran", "laporan_institusional"]
+        },
+        {
+            "username": "demokratjabar",
+            "category": "Partai Politik",
+            "priority": "high",
+            "expected_activities": ["kampanye_fundraising", "realisasi_pengeluaran", "laporan_institusional"]
+        }
+    ],
+    "scraper_settings": {
+        "max_posts_per_account": 50,
+        "headless_mode": true,
+        "delay_between_requests_seconds": [3, 7]
+    }
+}

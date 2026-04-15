@@ -1,0 +1,15 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Audit BPS: Run Scraper",
+            "type": "python",
+            "request": "launch",
+            "program": "${workspaceFolder}/src/g4wb_scraper.py",
+            "console": "integratedTerminal",
+            "cwd": "${workspaceFolder}",
+            "justMyCode": true,
+            "python": "${command:python.interpreterPath}" // <--- TAMBAHKAN INI
+        }
+    ]
+}
