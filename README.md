@@ -28,6 +28,35 @@ Membangun infrastruktur data yang mampu menjembatani celah antara rilis berita p
 
 -----
 
+## Struktur Proyek
+```text
+📁
+.
+├── config/             # Target & Konfigurasi (Disembunyikan .gitignore)
+├── src/                # Inti mesin
+│   ├── archive/        # Script BETA
+│   └── *.py            # Scraping & AI Logic
+├── data/               # Penyimpanan data lokal (Disembunyikan .gitignore)
+├── .gitignore          # List file dan folder sensitif yang disembunyikan
+├── LICENSE             # Lisensi MIT dalam 2 bahasa
+└── README.md           # Dokumentasi serta deskripsi proyek
+```
+
+-----
+
+## Alur Kerja Sistem
+
+```mermaid
+graph LR
+  A[Public Data] --> B{Scraper Engine}
+  B --> C[Local Environment]
+  C --> D[Ollama AI Analysis]
+  D --> E[Structured Insights/Excel]
+  E --> F[Policy Recommendation]
+```
+
+-----
+
 ##  Katalog Instrumen Terpadu (Bandung Sentinel Ecosystem)
 
 | Kategori | Nama Alat | Deskripsi Fungsi | Tujuan Utama |
