@@ -23,14 +23,18 @@ warnings.filterwarnings("ignore")
 class BPS_Synchronized_Sentinel:
     """
     Surgical Debugger V64 | The Synchronized Sentinel
-    Modul aktif: Isolated Log Buffer (Fix Terminal Bug), Expanded Lexical & Geofencing, Deterministic Caching.
+    Modul aktif: Isolated Log Buffer, Expanded Lexical & Geofencing, Deterministic Caching, Hyperlink Logging.
     """
     def __init__(self, args):
         self.args = args
         self.sites = [
-            "bandung.go.id", "jabarprov.go.id", "jabar.tribunnews.com",
+            "bandung.go.id",
             "tempo.co", "tirto.id", "narasi.tv", "ayobandung.com", "pikiran-rakyat.com", 
-            "bandung.kompas.com", "disdagin.bandung.go.id", "sipd.kemendagri.go.id"
+            "bandung.kompas.com", "disdagin.bandung.go.id",
+            "radarbandung.id", "kumparan.com", "cnnindonesia.com",
+            "rri.co.id", "infobandungkota.com", "prfmnews.id", 
+            "kilasbandungnews.com", "bandungbergerak.id", "koranmandala.com", 
+            "jabarekspres.com", "jabarprov.go.id", "jabar.tribunnews.com"
         ]
         
         self.edge_source_dir = str(Path.home() / "AppData" / "Local" / "Microsoft" / "Edge" / "User Data")
@@ -48,7 +52,7 @@ class BPS_Synchronized_Sentinel:
         self.session_active_urls = set()
         self.new_urls_to_save = []
         self.state_lock = asyncio.Lock()
-        self.print_lock = asyncio.Lock() # Kunci agar output log per artikel tidak tumpang tindih
+        self.print_lock = asyncio.Lock() # Mencegah teks log tumpang tindih di terminal
         
         self.load_visited_urls()
         
@@ -118,7 +122,9 @@ class BPS_Synchronized_Sentinel:
                 r"\bpiala\b", r"\bliga\b", r"\bgempa\b", r"\bkecelakaan\b", r"\bpembunuhan\b", r"\bpersib\b", 
                 r"\bskandal\b", r"\bpilkada\b", r"\bkampanye\b", r"\bcapres\b", r"\bcawalkot\b", r"\bpartai\b",
                 r"\bhakim\b", r"\bperadilan\b", r"\bnarkoba\b", r"\btiket\b", r"\bkonser\b", r"\bsurat[\s\-]?suara\b",
-                r"\bwisatawan\b", r"\bkuliner\b",
+                r"\bwisatawan\b", r"\bkuliner\b", r"\bbpbd\b", r"\bbencana\b", r"\bcuaca ekstrem\b", 
+                r"\bpohon tumbang\b", r"\bhujan deras\b", r"\bkpu\b", r"\bbawaslu\b", r"\blogistik pemilu\b", 
+                r"\bbunuh diri\b", r"\bpengeroyokan\b",
                 # Loker & CPNS
                 r"\bcpns\b", r"\blowongan\b", r"\bloker\b", r"\brekrutmen\b",
                 # Akademis, Seminar, Edukasi & Event Kampus
@@ -127,7 +133,8 @@ class BPS_Synchronized_Sentinel:
                 r"\bmahasiswa\b", r"\bdosen\b", r"\bguru besar\b", r"\brektor\b", r"\bdekan\b", 
                 r"\bwisuda\b", r"\bdies natalis\b", r"\bsnbt\b", r"\bppdb\b", r"\bkemendikdasmen\b",
                 r"\bseminar\b", r"\bwebinar\b", r"\bsimposium\b", r"\blokakarya\b", r"\bkonferensi\b", 
-                r"\bsidang terbuka\b", r"\bskripsi\b", r"\btesis\b", r"\bdisertasi\b"
+                r"\bsidang terbuka\b", r"\bskripsi\b", r"\btesis\b", r"\bdisertasi\b", r"\bsman\b", r"\bsmpn\b", 
+                r"\bpramuka\b", r"\bjambore\b"
             ],
             "TITLE_BLACKLIST": [
                 "pegawai", "sejarah", "visi", "misi", "tupoksi", "kontak", "gallery", 
@@ -181,6 +188,9 @@ class BPS_Synchronized_Sentinel:
             print("     [!!!] Ollama TIDAK TERDETEKSI. Harap eksekusi `ollama serve` di terminal terpisah.")
             return False
 
+    def format_hyperlink(self, url, text):
+        return f"\033]8;;{url}\033\\{text}\033]8;;\033\\"
+
     def _decode_google_url(self, url):
         real_url = url
         if "articles/CBM" in url:
@@ -191,13 +201,15 @@ class BPS_Synchronized_Sentinel:
                 decoded_bytes = base64.urlsafe_b64decode(encoded_str)
                 match = re.search(rb'(https?://[a-zA-Z0-9\-\.\_\/\?\=\&\%\+]+)', decoded_bytes)
                 if match: real_url = match.group(1).decode('utf-8')
-            except: pass
+            except Exception: pass
+        
         if any(domain in real_url for domain in ["tribunnews.com", "pikiran-rakyat.com", "ayobandung.com", "kompas.com", "tirto.id"]):
             parsed = urlparse(real_url)
             params = parse_qs(parsed.query)
             params['page'] = ['all']
             new_query = urlencode(params, doseq=True)
             real_url = urlunparse(parsed._replace(query=new_query))
+            
         return real_url
 
     def is_rejected_preflight(self, title, url):
@@ -206,6 +218,10 @@ class BPS_Synchronized_Sentinel:
         combined = f"{title} {url}".lower()
         
         has_strong_anchor = any(re.search(a, title_lower) for a in self.config["GEOGRAPHY"]["STRICT_ANCHORS"])
+        has_trade_intl = any(re.search(t, title_lower) for t in self.config["TRADE_FLUX"]["INTERNASIONAL"])
+        has_trade_dom = any(re.search(t, title_lower) for t in self.config["TRADE_FLUX"]["ANTAR_DAERAH"] + self.config["TRADE_FLUX"]["INDICATORS"])
+        has_commodity = any(re.search(c, title_lower) for c in self.config["COMMODITIES"])
+        has_trade = has_trade_intl or (has_trade_dom and has_commodity)
         
         if any(b in title_lower for b in self.config["TITLE_BLACKLIST"]): 
             return True, "Halaman Statis/Administratif"
@@ -213,10 +229,10 @@ class BPS_Synchronized_Sentinel:
             if url_lower.endswith(ext) or (ext + "?" in url_lower): 
                 return True, "Ekstensi Dokumen Non-Naratif"
 
-        # OVERRIDE LOGIC: Noise / Akademis dimaafkan JIKA ada kata "Pemkot Bandung" / "Kota Bandung"
+        # Smart Lexical Override: Jika noise terdeteksi tapi ada indikator DAGANG dan GEO kuat, biarkan SLM yang menilai.
         is_noise = any(re.search(n, title_lower) for n in self.config["NOISE_WORDS"]) or any(re.search(n, combined) for n in self.config["NOISE_WORDS"])
-        if is_noise and not has_strong_anchor: 
-            return True, "Terdeteksi Noise Konteks Akademis/Kriminal (Tanpa Anchor Kuat)"
+        if is_noise and not (has_strong_anchor and has_trade): 
+            return True, "Terdeteksi Noise Konteks (Akademis/Kriminal/Bencana)"
         
         is_blacklisted = any(re.search(b, title_lower) for b in self.config["GEOGRAPHY"]["BLACKLIST"])
         if is_blacklisted and not has_strong_anchor: 
@@ -277,24 +293,29 @@ class BPS_Synchronized_Sentinel:
     def is_relevant_lexical(self, title, text):
         combined = f"{title} {text}".lower()
         has_strong_anchor = any(re.search(g, combined) for g in self.config["GEOGRAPHY"]["STRICT_ANCHORS"])
-        
-        is_noise = any(re.search(n, combined) for n in self.config["NOISE_WORDS"])
-        if is_noise and not has_strong_anchor: 
-            return False, "Terdeteksi Noise Akademis/Kriminal (Tanpa Anchor Kuat)"
-        
-        is_blacklisted = any(re.search(b, combined) for b in self.config["GEOGRAPHY"]["BLACKLIST"])
-        if is_blacklisted and not has_strong_anchor: 
-            return False, "Fokus ke Geografi Lain (Tanpa Entitas Kuat Kota Bandung)"
-
         has_strict_geo = has_strong_anchor or any(re.search(d, combined) for d in self.config["GEOGRAPHY"]["DISTRICTS"])
-        if not has_strict_geo: return False, "Gagal Geofencing (Tidak eksplisit menyebut Kota Bandung)"
 
         has_trade_intl = any(re.search(t, combined) for t in self.config["TRADE_FLUX"]["INTERNASIONAL"])
         has_trade_domestic = any(re.search(t, combined) for t in self.config["TRADE_FLUX"]["ANTAR_DAERAH"] + self.config["TRADE_FLUX"]["INDICATORS"])
         has_commodity = any(re.search(c, combined) for c in self.config["COMMODITIES"])
+        has_trade = has_trade_intl or (has_trade_domestic and has_commodity)
 
-        if has_trade_intl: return True, "Lolos Leksikal: Perdagangan Internasional"
-        elif has_trade_domestic and has_commodity: return True, "Lolos Leksikal: Perdagangan Domestik + Komoditas"
+        is_noise = any(re.search(n, combined) for n in self.config["NOISE_WORDS"])
+        
+        # Override Noise if BOTH Geography and Trade Indicators are undeniably strong
+        if is_noise and not (has_strong_anchor and has_trade): 
+            return False, "Terdeteksi Noise Akademis/Kriminal/Bencana (Tanpa Anchor Dagang Kuat)"
+        
+        is_blacklisted = any(re.search(b, combined) for b in self.config["GEOGRAPHY"]["BLACKLIST"])
+        if is_blacklisted and not has_strong_anchor: 
+            return False, "Fokus ke Wilayah/Provinsi Lain (Tanpa Entitas Kuat Kota Bandung)"
+
+        if not has_strict_geo: 
+            return False, "Gagal Geofencing (Tidak eksplisit menyebut Kota Bandung)"
+
+        if has_trade: 
+            return True, "Lolos Leksikal: Perdagangan/Logistik Komoditas"
+            
         return False, "Lolos Geografi, namun miskin indikator BPS"
 
     def smart_truncate(self, text):
@@ -311,9 +332,9 @@ class BPS_Synchronized_Sentinel:
         else:
             return text[:1500]
 
-    async def interrogate_with_llama(self, article_text, log_buffer):
+    async def interrogate_with_llama(self, article_text, task_log):
         truncated_text = self.smart_truncate(article_text)
-        log_buffer.append("     [>] Mengirim Smart Context Window ke Hakim SLM (Ollama)...")
+        task_log.append("     [>] Mengirim Smart Context Window ke Hakim SLM (Ollama)...")
         
         custom_prompt = f"""
         Lakukan audit investigatif pada teks berita berikut untuk kebutuhan data Badan Pusat Statistik (BPS).
@@ -377,23 +398,21 @@ class BPS_Synchronized_Sentinel:
             return site, feed.entries
         except: return site, []
 
-    async def process_article(self, context, entry, site):
-        # ISOLATED LOG BUFFER: Menyimpan riwayat eksekusi artikel ini untuk dicetak serentak di akhir
+    async def process_article(self, context, entry, site, real_url):
+        # Buffer Log terisolasi agar output tidak tumpang tindih
         task_log = []
+        link_text = self.format_hyperlink(real_url, "[BACA ARTIKEL]")
         
         async with self.browser_semaphore:
-            real_url = self._decode_google_url(entry.link)
-            
             async with self.state_lock:
-                if real_url in self.session_active_urls or real_url in self.permanent_visited_urls:
+                if real_url in self.session_active_urls:
                     return
                 self.session_active_urls.add(real_url)
 
-            # PRE-FLIGHT REJECT
             is_rejected, reject_reason = self.is_rejected_preflight(entry.title, real_url)
             if is_rejected:
                 task_log.append(f"\n -> {entry.title[:60]}...")
-                task_log.append(f"    [BLOCKED PRE-FLIGHT] {reject_reason}.")
+                task_log.append(f"    [BLOCKED PRE-FLIGHT] {reject_reason}. {link_text}")
                 await self._commit_to_permanent_blacklist(real_url)
                 
                 async with self.print_lock: print("\n".join(task_log))
@@ -402,7 +421,7 @@ class BPS_Synchronized_Sentinel:
             is_html, mime_reason = await asyncio.to_thread(self.verify_mime_type, real_url)
             if not is_html:
                 task_log.append(f"\n -> {entry.title[:60]}...")
-                task_log.append(f"    [BLOCKED] {mime_reason}.")
+                task_log.append(f"    [BLOCKED] {mime_reason}. {link_text}")
                 await self._commit_to_permanent_blacklist(real_url)
                 
                 async with self.print_lock: print("\n".join(task_log))
@@ -421,7 +440,7 @@ class BPS_Synchronized_Sentinel:
                     await page.wait_for_timeout(2000)
                 except TimeoutError: pass 
                     
-                # Cloudflare check tersembunyi, jika CF butuh manual interaction, kita print langsung melewati buffer
+                # Eksekusi Cloudflare bypass pasif
                 try:
                     iframe = await page.wait_for_selector('iframe[src*="cloudflare"], #challenge-running', timeout=4000)
                     if iframe:
@@ -473,31 +492,32 @@ class BPS_Synchronized_Sentinel:
                                 "Skor": audit_result.get("skor_relevansi_bps", 0),
                                 "Teks": purified_text[:1500] 
                             })
-                            task_log.append(f"     [SECURED] Lolos audit BPS. Tautan: {real_url}")
+                            task_log.append(f"     [SECURED] Lolos audit BPS & SLM. {link_text}")
                             pacing_type = "normal" 
                             await self._commit_to_permanent_blacklist(real_url)
                         else:
-                            task_log.append(f"     [REJECTED] SLM Menolak: {status_geo}")
+                            task_log.append(f"     [REJECTED] SLM Menolak: {status_geo}. {link_text}")
                             pacing_type = "normal" 
                             await self._commit_to_permanent_blacklist(real_url)
                     else:
-                        task_log.append(f"     [SKIPPED] Teks kerdil ({char_count} kar). Indikasi Paywall/Error Load.")
+                        task_log.append(f"     [SKIPPED] Teks kerdil ({char_count} kar). Indikasi Paywall/Error. {link_text}")
                         pacing_type = "fast"
                 else:
-                    task_log.append(f"     [SKIPPED] {reason}")
+                    task_log.append(f"     [SKIPPED] {reason}. {link_text}")
                     pacing_type = "fast"
                     await self._commit_to_permanent_blacklist(real_url)
 
             except Exception as e:
                 if "TargetClosedError" not in str(e) and "has been closed" not in str(e):
-                    task_log.append(f"     [ERROR Ekstraksi] {e}")
+                    task_log.append(f"     [ERROR Ekstraksi] {e}. {link_text}")
                 pacing_type = "fast"
             finally:
                 if not page.is_closed(): await page.close()
                 
-                # Coret log ke terminal secara utuh tanpa terputus thread lain
-                async with self.print_lock:
-                    print("\n".join(task_log))
+                # Cetak log buffer secara atomik ke terminal
+                if task_log:
+                    async with self.print_lock:
+                        print("\n".join(task_log))
                 
                 if pacing_type == "normal":
                     await asyncio.sleep(random.uniform(3.0, 5.0))
@@ -524,7 +544,23 @@ class BPS_Synchronized_Sentinel:
         for site, entries in rss_results:
             all_entries.extend([(site, e) for e in entries[:15]]) 
             
-        print(f"[RADAR] Menemukan {len(all_entries)} target potensial. Memulai pembedahan asinkron...\n")
+        # DEDUPLIKASI FASE 1 (Memperbaiki "Silent Exit" Bug)
+        new_targets = []
+        cached_count = 0
+        for site, entry in all_entries:
+            real_url = self._decode_google_url(entry.link)
+            if real_url in self.permanent_visited_urls:
+                cached_count += 1
+            else:
+                new_targets.append((site, entry, real_url))
+                
+        print(f"[RADAR] Menemukan {len(all_entries)} target potensial ({cached_count} sudah diaudit sebelumnya, {len(new_targets)} target baru).")
+        
+        if not new_targets:
+            print("[✓] Semua target hari ini sudah diekstraksi. Menutup sistem dengan anggun.")
+            sys.exit(0)
+            
+        print("[RADAR] Memulai pembedahan asinkron untuk target baru...\n")
 
         context = None
         try:
@@ -536,7 +572,7 @@ class BPS_Synchronized_Sentinel:
                     args=["--disable-blink-features=AutomationControlled"]
                 )
 
-                tasks = [self.process_article(context, entry, site) for site, entry in all_entries]
+                tasks = [self.process_article(context, entry, site, real_url) for site, entry, real_url in new_targets]
                 await asyncio.gather(*tasks)
 
         except KeyboardInterrupt:
