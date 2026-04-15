@@ -168,4 +168,4 @@ python src/instagram_scraper.py --target nama_akun_asosiasi
 
 -----
 
-*Dikembangkan untuk keperluan audit data Badan Pusat Statistik (BPS).*
+*Dikembangkan untuk keperluan audit data Badan Pusat Statistik (BPS) Kota Bandung.*
