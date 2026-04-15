@@ -14,6 +14,8 @@ import argparse
 import glob
 import html
 import openpyxl
+from playwright.sync_api import TimeoutError as PlaywrightTimeoutError
+import torch
 
 # THE SILENCER: Mengurangi noise terminal
 warnings.filterwarnings("ignore", category=UserWarning, module="torch.utils.data.dataloader")
@@ -26,6 +28,8 @@ class BPSMultimodalScraper:
         self.raw_output_path = "data/raw/"
         self.progress_file = "config/progress.json"
         
+        self.cleanup_old_media(days_old=30)
+
         self.intercepted_dates = {}
         self.intercepted_captions = {} 
         
@@ -38,7 +42,15 @@ class BPSMultimodalScraper:
         os.makedirs(self.raw_output_path, exist_ok=True)
         
         print("[SYSTEM] Mengaktifkan Neural Engine (EasyOCR)...")
-        self.reader = easyocr.Reader(['id', 'en'], gpu=False)
+        has_gpu = torch.cuda.is_available()
+        if has_gpu:
+            print("[SYSTEM] 🟢 GPU Terdeteksi (CUDA)! Kecepatan ekstraksi maksimal aktif.")
+            self.reader = easyocr.Reader(['id', 'en'], gpu=True)
+        else:
+            print("[SYSTEM] 🟡 GPU Tidak Ditemukan. Jatuh kembali ke mode CPU.")
+            print("         *Reminder: Jika ini laptop pribadi, proses per-gambar akan sedikit lebih lambat.")
+            self.reader = easyocr.Reader(['id', 'en'], gpu=False)
+                    
         print("[SYSTEM] Neural Engine Siap.")
 
         # =====================================================================
@@ -83,6 +95,32 @@ class BPSMultimodalScraper:
             print(f"[!] Critical: {path} tidak ditemukan."); sys.exit(1)
         with open(path, 'r') as f: self.config = json.load(f)
 
+    def cleanup_old_media(self, days_old=30):
+        """Menghapus gambar bukti yang usianya melebihi batas hari (Garbage Collection)."""
+        print(f"\n[SYSTEM] Memulai Pembersihan Media (Retention: {days_old} hari)...")
+        now = time.time()
+        deleted_count = 0
+        
+        for root, dirs, files in os.walk(self.base_data_path):
+            if "media" in root:
+                for file in files:
+                    if file.endswith(('.jpg', '.png', '.jpeg')):
+                        filepath = os.path.join(root, file)
+                        # Hitung umur file dalam hitungan hari
+                        file_age_days = (now - os.path.getmtime(filepath)) / (24 * 3600)
+                        
+                        if file_age_days > days_old:
+                            try:
+                                os.remove(filepath)
+                                deleted_count += 1
+                            except Exception as e:
+                                pass
+                                
+        if deleted_count > 0:
+            print(f"[SYSTEM] Berhasil membersihkan {deleted_count} file gambar usang.")
+        else:
+            print("[SYSTEM] Ruang penyimpanan media masih bersih.")
+    
     def _reset_progress(self):
         print("\n[SYSTEM] Protokol Reset Diaktifkan: Menghapus rekam jejak audit sebelumnya...")
         if os.path.exists(self.progress_file): 
@@ -120,9 +158,12 @@ class BPSMultimodalScraper:
         """
         if not text or text == "OCR_FAILED": 
             return 0
-            
+        
         # 1. PRE-PROCESSING
-        text_clean = re.sub(r'(?<=\d)[oO]+|[oO]+(?=\d)', '0', str(text).lower())
+        text_clean = str(text).lower()
+        text_clean = re.sub(r'(?<=\d)[sS](?=[.,\d]|$)|(?<=^[.,\d])[sS](?=\d)', '5', text_clean)
+        text_clean = re.sub(r'(?<=\d)[bB](?=[.,\d]|$)|(?<=^[.,\d])[bB](?=\d)', '8', text_clean)
+        text_clean = re.sub(r'(?<=\d)[oO]+|[oO]+(?=\d)', '0', text_clean)
         # Bersihkan noise pemisah (misal: ,= atau -,)
         text_clean = text_clean.replace(',=', '').replace('-,', '.')
         
@@ -189,7 +230,7 @@ class BPSMultimodalScraper:
                     self._json_crawler(item, current_shortcode)
 
     def _intercept_network(self, response):
-        if "application/json" in response.headers.get("content-type", ""):
+        if response.status_code == 200 and "application/json" in response.headers.get("content-type", ""):
             try:
                 data = response.json()
                 self._json_crawler(data)
@@ -290,7 +331,8 @@ class BPSMultimodalScraper:
     def scrape(self):
         try:
             with sync_playwright() as p:
-                browser = p.chromium.launch(headless=False)
+                headless_cfg = self.config.get('scraper_settings', {}).get('headless_mode', False)
+                browser = p.chromium.launch(headless=headless_cfg)
                 context = browser.new_context(storage_state=self.auth_path)
                 
                 for target in self.config['targets']:
@@ -307,7 +349,17 @@ class BPSMultimodalScraper:
                         page = context.new_page()
                         page.on("response", self._intercept_network)
                         page.goto(f"https://www.instagram.com/{username}/", timeout=60000)
-                        page.wait_for_selector("main", timeout=15000)
+                        try:
+                            page.wait_for_selector("main", timeout=15000)
+                        except PlaywrightTimeoutError:
+                            print(f"\n[!] Gagal memuat profil @{username}.")
+                            # Cek apakah dilempar ke halaman login
+                            if page.query_selector("input[name='username']"):
+                                print("[CRITICAL] Sesi Cookies Habis! Harap perbarui file 'auth_state.json'.")
+                                sys.exit(1) # Hentikan skrip karena percuma dilanjut
+                            else:
+                                print("[WARNING] Elemen 'main' tidak ditemukan. Mungkin terkena Soft-Ban atau koneksi lambat. Melewati akun ini...")
+                                continue # Lanjut ke akun berikutnya
 
                         scripts_text = page.evaluate('''() => {
                             return Array.from(document.querySelectorAll('script[type="application/json"], script[type="application/json+protobuf"]'))

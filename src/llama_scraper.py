@@ -20,21 +20,17 @@ import warnings
 
 warnings.filterwarnings("ignore")
 
-class BPS_Canonical_Sentinel:
+class BPS_Synchronized_Sentinel:
     """
-    Surgical Debugger V63 | The Canonical Sentinel
-    Modul aktif: Deterministic Caching (Fix Yield), Asynchronous Extractor, Native DOM.
+    Surgical Debugger V64 | The Synchronized Sentinel
+    Modul aktif: Isolated Log Buffer (Fix Terminal Bug), Expanded Lexical & Geofencing, Deterministic Caching.
     """
     def __init__(self, args):
         self.args = args
         self.sites = [
-            "narasi.tv/tags/kota-bandung", "bandung.go.id", "jabarprov.go.id", "jabar.tribunnews.com",
-            "tempo.co/tag/kota-bandung", "tirto.id", "narasi.tv", "ayobandung.com", "pikiran-rakyat.com", 
-            "bandung.kompas.com", "disdagin.bandung.go.id", "detik.com", "radarbandung.id", 
-            "kumparan.com/topic/bandung", "cnnindonesia.com/tag/bandung",
-            "rri.co.id/bandung", "infobandungkota.com", "prfmnews.id", 
-            "kilasbandungnews.com", "bandungbergerak.id", "koranmandala.com", 
-            "jabarekspres.com", "jabar.tribunnews.com"
+            "bandung.go.id", "jabarprov.go.id", "jabar.tribunnews.com",
+            "tempo.co", "tirto.id", "narasi.tv", "ayobandung.com", "pikiran-rakyat.com", 
+            "bandung.kompas.com", "disdagin.bandung.go.id", "sipd.kemendagri.go.id"
         ]
         
         self.edge_source_dir = str(Path.home() / "AppData" / "Local" / "Microsoft" / "Edge" / "User Data")
@@ -47,18 +43,18 @@ class BPS_Canonical_Sentinel:
         
         self.session_data = []
         
-        # State Management untuk Deduplikasi (Optimasi Heuristic Pruning)
-        self.permanent_visited_urls = set() # Database permanen (Final)
-        self.session_active_urls = set()    # Mencegah tab paralel membuka URL yang sama persis
-        self.new_urls_to_save = []          # Buffer untuk disimpan ke .txt di akhir
-        self.state_lock = asyncio.Lock()    # Mencegah Race Condition saat asinkron
+        # State Management
+        self.permanent_visited_urls = set()
+        self.session_active_urls = set()
+        self.new_urls_to_save = []
+        self.state_lock = asyncio.Lock()
+        self.print_lock = asyncio.Lock() # Kunci agar output log per artikel tidak tumpang tindih
         
         self.load_visited_urls()
         
         self.ollama_url = "http://localhost:11434/api/generate"
         self.model_name = "bps-auditor" 
         
-        # Membatasi 2 tab agar RAM dan VRAM VGA tidak meledak
         self.browser_semaphore = asyncio.Semaphore(2)
         
         self.config = {
@@ -79,9 +75,23 @@ class BPS_Canonical_Sentinel:
                     r"\bcibaduyut\b", r"\bpasar[\s\-]?baru\b", r"\bsuci\b", r"\bcigondewah\b", r"\bbinong\b"
                 ],
                 "BLACKLIST": [
+                    # Kabupaten/Kota Tetangga Jabar
                     r"\bkabupaten[\s\-]?bandung\b", r"\bbupati\b", r"\bsoreang\b", r"\bkbb\b", 
                     r"\bbandung[\s\-]?barat\b", r"\blembang\b", r"\bcimahi\b", r"\bmajalaya\b", 
-                    r"\bpangalengan\b", r"\bciwidey\b", r"\bpadalarang\b", r"\bpemkab\b"
+                    r"\bpangalengan\b", r"\bciwidey\b", r"\bpadalarang\b", r"\bpemkab\b",
+                    r"\bbekasi\b", r"\bbogor\b", r"\bdepok\b", r"\bkarawang\b", r"\bpurwakarta\b",
+                    r"\bsukabumi\b", r"\bciamis\b", r"\btasikmalaya\b", r"\bgarut\b", r"\bcirebon\b",
+                    r"\bcianjur\b", r"\bindramayu\b", r"\bmajalengka\b", r"\bsumedang\b", r"\bsubang\b", r"\bkuningan\b",
+                    # Provinsi & Ibukota Lain di Indonesia
+                    r"\bjakarta\b", r"\bdki jakarta\b", r"\bjawa tengah\b", r"\bjateng\b", r"\bsemarang\b",
+                    r"\bjawa timur\b", r"\bjatim\b", r"\bsurabaya\b", r"\bmalang\b", r"\bbanten\b", r"\btangerang\b",
+                    r"\byogyakarta\b", r"\bdiy\b", r"\bjogja\b", r"\bbali\b", r"\bdenpasar\b",
+                    r"\bsumatera\b", r"\bsumut\b", r"\bmedan\b", r"\bsumbar\b", r"\bpadang\b", r"\bsumsel\b", r"\bpalembang\b",
+                    r"\briau\b", r"\bbatam\b", r"\blampung\b", r"\bbengkulu\b", r"\bjambi\b", r"\baceh\b",
+                    r"\bkalimantan\b", r"\bkalbar\b", r"\bpontianak\b", r"\bkaltim\b", r"\bbalikpapan\b", r"\bsamarinda\b", 
+                    r"\bkalsel\b", r"\bbanjarmasin\b", r"\bkalteng\b", r"\bpalangkaraya\b",
+                    r"\bsulawesi\b", r"\bsulsel\b", r"\bmakassar\b", r"\bsulut\b", r"\bmanado\b", r"\bsulteng\b", r"\bpalu\b",
+                    r"\bpapua\b", r"\bmaluku\b", r"\bambon\b", r"\bntb\b", r"\bmataram\b", r"\bntt\b", r"\bkupang\b"
                 ]
             },
             "TRADE_FLUX": {
@@ -104,12 +114,20 @@ class BPS_Canonical_Sentinel:
                 r"\bsepatu\b", r"\btekstil\b", r"\bsemen\b", r"\belpiji\b", r"\bbbm\b", r"\bkopi\b", r"\bkakao\b", r"\bkosmetik\b"
             ],
             "NOISE_WORDS": [
+                # Kriminal, Olahraga & Bencana
                 r"\bpiala\b", r"\bliga\b", r"\bgempa\b", r"\bkecelakaan\b", r"\bpembunuhan\b", r"\bpersib\b", 
                 r"\bskandal\b", r"\bpilkada\b", r"\bkampanye\b", r"\bcapres\b", r"\bcawalkot\b", r"\bpartai\b",
-                r"\bsnbt\b", r"\bunpad\b", r"\bkemendikdasmen\b", r"\bhakim\b", r"\bperadilan\b", r"\bkuliner\b", 
-                r"\bwisatawan\b", r"\bnarkoba\b", r"\btiket\b", r"\bkonser\b", r"\bsurat[\s\-]?suara\b",
-                r"\bcpns\b", r"\blowongan\b", r"\bloker\b", r"\brekrutmen\b", r"\bmahasiswa\b", r"\bkampus\b", 
-                r"\bwisuda\b", r"\bseminar\b", r"\bwebinar\b", r"\bombudsman\b", r"\bppdb\b"
+                r"\bhakim\b", r"\bperadilan\b", r"\bnarkoba\b", r"\btiket\b", r"\bkonser\b", r"\bsurat[\s\-]?suara\b",
+                r"\bwisatawan\b", r"\bkuliner\b",
+                # Loker & CPNS
+                r"\bcpns\b", r"\blowongan\b", r"\bloker\b", r"\brekrutmen\b",
+                # Akademis, Seminar, Edukasi & Event Kampus
+                r"\bkampus\b", r"\buniversitas\b", r"\binstitut\b", r"\bpoliteknik\b", r"\bakademi\b", r"\bsekolah tinggi\b",
+                r"\buin\b", r"\bitb\b", r"\bunpas\b", r"\bunpad\b", r"\bupi\b", r"\btelkom university\b", r"\bunpar\b", r"\bunisba\b",
+                r"\bmahasiswa\b", r"\bdosen\b", r"\bguru besar\b", r"\brektor\b", r"\bdekan\b", 
+                r"\bwisuda\b", r"\bdies natalis\b", r"\bsnbt\b", r"\bppdb\b", r"\bkemendikdasmen\b",
+                r"\bseminar\b", r"\bwebinar\b", r"\bsimposium\b", r"\blokakarya\b", r"\bkonferensi\b", 
+                r"\bsidang terbuka\b", r"\bskripsi\b", r"\btesis\b", r"\bdisertasi\b"
             ],
             "TITLE_BLACKLIST": [
                 "pegawai", "sejarah", "visi", "misi", "tupoksi", "kontak", "gallery", 
@@ -132,20 +150,16 @@ class BPS_Canonical_Sentinel:
         print(f" [>] Mengamankan cache historis: {len(self.permanent_visited_urls)} URL tersimpan di memori lokal.")
 
     async def _commit_to_permanent_blacklist(self, url):
-        """Mencatat URL ke database HANYA jika artikel telah diaudit secara final."""
         async with self.state_lock:
             if url not in self.permanent_visited_urls:
                 self.permanent_visited_urls.add(url)
                 self.new_urls_to_save.append(url)
 
     def _save_visited_urls_delta(self):
-        """Menyimpan selisih URL baru di akhir operasi."""
-        if not self.new_urls_to_save:
-            return
+        if not self.new_urls_to_save: return
         with open(self.visited_file, "a", encoding="utf-8") as f:
             for url in self.new_urls_to_save:
                 f.write(url + "\n")
-        print(f" [!] Sistem mematenkan {len(self.new_urls_to_save)} target ke dalam Blacklist Deterministik.")
 
     def prepare_workspace(self):
         print(" [>] Sinkronisasi Ruang Isolasi Browser...")
@@ -155,8 +169,7 @@ class BPS_Canonical_Sentinel:
             shutil.rmtree(target, ignore_errors=True)
         try:
             shutil.copytree(source, target, ignore=shutil.ignore_patterns("SingletonLock", "lock"))
-        except Exception:
-            pass
+        except: pass
 
     def check_ollama(self):
         try:
@@ -178,16 +191,13 @@ class BPS_Canonical_Sentinel:
                 decoded_bytes = base64.urlsafe_b64decode(encoded_str)
                 match = re.search(rb'(https?://[a-zA-Z0-9\-\.\_\/\?\=\&\%\+]+)', decoded_bytes)
                 if match: real_url = match.group(1).decode('utf-8')
-            except Exception: pass
-        
-        # Meretas Pagination
+            except: pass
         if any(domain in real_url for domain in ["tribunnews.com", "pikiran-rakyat.com", "ayobandung.com", "kompas.com", "tirto.id"]):
             parsed = urlparse(real_url)
             params = parse_qs(parsed.query)
             params['page'] = ['all']
             new_query = urlencode(params, doseq=True)
             real_url = urlunparse(parsed._replace(query=new_query))
-            
         return real_url
 
     def is_rejected_preflight(self, title, url):
@@ -195,17 +205,22 @@ class BPS_Canonical_Sentinel:
         url_lower = url.lower()
         combined = f"{title} {url}".lower()
         
-        if any(b in title_lower for b in self.config["TITLE_BLACKLIST"]): return True, "Halaman Statis/Administratif"
+        has_strong_anchor = any(re.search(a, title_lower) for a in self.config["GEOGRAPHY"]["STRICT_ANCHORS"])
+        
+        if any(b in title_lower for b in self.config["TITLE_BLACKLIST"]): 
+            return True, "Halaman Statis/Administratif"
         for ext in self.config["DOCUMENT_EXTENSIONS"]:
-            if url_lower.endswith(ext) or (ext + "?" in url_lower): return True, "Ekstensi Dokumen Non-Naratif"
+            if url_lower.endswith(ext) or (ext + "?" in url_lower): 
+                return True, "Ekstensi Dokumen Non-Naratif"
 
-        if any(re.search(n, title_lower) for n in self.config["NOISE_WORDS"]): return True, "Terdeteksi Noise Konteks"
-        if any(re.search(n, combined) for n in self.config["NOISE_WORDS"]): return True, "Noise Kontekstual"
+        # OVERRIDE LOGIC: Noise / Akademis dimaafkan JIKA ada kata "Pemkot Bandung" / "Kota Bandung"
+        is_noise = any(re.search(n, title_lower) for n in self.config["NOISE_WORDS"]) or any(re.search(n, combined) for n in self.config["NOISE_WORDS"])
+        if is_noise and not has_strong_anchor: 
+            return True, "Terdeteksi Noise Konteks Akademis/Kriminal (Tanpa Anchor Kuat)"
         
         is_blacklisted = any(re.search(b, title_lower) for b in self.config["GEOGRAPHY"]["BLACKLIST"])
-        has_strong_anchor = any(re.search(a, title_lower) for a in self.config["GEOGRAPHY"]["STRICT_ANCHORS"])
         if is_blacklisted and not has_strong_anchor: 
-            return True, "Terdeteksi Wilayah Tetangga (Tanpa Anchor Kuat)"
+            return True, "Terdeteksi Wilayah Tetangga/Provinsi Lain (Tanpa Anchor Kuat)"
         
         return False, "Aman"
 
@@ -219,9 +234,8 @@ class BPS_Canonical_Sentinel:
                         return False, f"Format Dokumen Ditolak ({content_type})"
                     return True, "Valid HTML"
             except requests.exceptions.Timeout:
-                if attempt == 1: return True, "MIME Timeout (dibiarkan lanjut)"
-            except Exception:
-                return True, "MIME Error"
+                if attempt == 1: return True, "MIME Timeout"
+            except: return True, "MIME Error"
         return True, "MIME Error"
 
     async def network_interceptor(self, route):
@@ -230,18 +244,6 @@ class BPS_Canonical_Sentinel:
             await route.abort()
             return
         await route.continue_()
-
-    async def cloudflare_organic_wait(self, page):
-        """Passive Cloudflare Trap."""
-        try:
-            iframe = await page.wait_for_selector('iframe[src*="cloudflare"], #challenge-running', timeout=5000)
-            if iframe:
-                print(f"\a\n     [!!!] CLOUDFLARE TERDETEKSI pada {page.url[:40]}... Tahan & Centang Captcha!")
-                await page.wait_for_function("document.querySelector('iframe[src*=\"cloudflare\"]') === null && document.querySelector('#challenge-running') === null", timeout=60000)
-                print("     [~] Akses Terbuka! Melanjutkan ekstraksi...")
-                await page.wait_for_timeout(3000)
-        except TimeoutError: pass
-        except Exception: pass
 
     async def execute_hydration_scroll(self, page):
         try:
@@ -274,12 +276,15 @@ class BPS_Canonical_Sentinel:
 
     def is_relevant_lexical(self, title, text):
         combined = f"{title} {text}".lower()
-        if any(re.search(n, combined) for n in self.config["NOISE_WORDS"]): return False, "Terdeteksi Noise Konteks"
+        has_strong_anchor = any(re.search(g, combined) for g in self.config["GEOGRAPHY"]["STRICT_ANCHORS"])
+        
+        is_noise = any(re.search(n, combined) for n in self.config["NOISE_WORDS"])
+        if is_noise and not has_strong_anchor: 
+            return False, "Terdeteksi Noise Akademis/Kriminal (Tanpa Anchor Kuat)"
         
         is_blacklisted = any(re.search(b, combined) for b in self.config["GEOGRAPHY"]["BLACKLIST"])
-        has_strong_anchor = any(re.search(g, combined) for g in self.config["GEOGRAPHY"]["STRICT_ANCHORS"])
         if is_blacklisted and not has_strong_anchor: 
-            return False, "Fokus ke Wilayah Tetangga (Tanpa Entitas Kuat Kota Bandung)"
+            return False, "Fokus ke Geografi Lain (Tanpa Entitas Kuat Kota Bandung)"
 
         has_strict_geo = has_strong_anchor or any(re.search(d, combined) for d in self.config["GEOGRAPHY"]["DISTRICTS"])
         if not has_strict_geo: return False, "Gagal Geofencing (Tidak eksplisit menyebut Kota Bandung)"
@@ -294,8 +299,7 @@ class BPS_Canonical_Sentinel:
 
     def smart_truncate(self, text):
         text_lower = text.lower()
-        if len(text) <= 1500:
-            return text
+        if len(text) <= 1500: return text
             
         first_chunk = text[:800]
         match = re.search(r'bandung', text_lower[800:])
@@ -307,9 +311,9 @@ class BPS_Canonical_Sentinel:
         else:
             return text[:1500]
 
-    async def interrogate_with_llama(self, article_text):
+    async def interrogate_with_llama(self, article_text, log_buffer):
         truncated_text = self.smart_truncate(article_text)
-        print("     [>] Mengirim Smart Context Window ke Hakim SLM (Ollama)...")
+        log_buffer.append("     [>] Mengirim Smart Context Window ke Hakim SLM (Ollama)...")
         
         custom_prompt = f"""
         Lakukan audit investigatif pada teks berita berikut untuk kebutuhan data Badan Pusat Statistik (BPS).
@@ -317,18 +321,10 @@ class BPS_Canonical_Sentinel:
         ATURAN YURISDIKSI SANGAT PENTING:
         1. Status Geofencing HARUS "Valid Kota Bandung" JIKA peristiwa riil (arus barang, logistik, harga pasar) terjadi secara fisik di Kota Bandung.
         2. TOLAK BERITA (Geofencing: "Out of Jurisdiction" atau "Irrelevant Context") JIKA teks tersebut hanya berupa:
-           - Lowongan kerja atau rekrutmen (meskipun di instansi terkait perdagangan/bea cukai).
-           - Opini, seminar, diskusi kampus, atau pernyataan akademis mengenai ekonomi global yang tidak memiliki data empiris kejadian di lapangan Kota Bandung.
-           - Berita harga nasional (Kemendag/Pusat) yang sama sekali tidak mewawancarai atau meninjau kondisi pasar/pedagang di Kota Bandung.
+           - Lowongan kerja atau rekrutmen.
+           - Opini, seminar, diskusi kampus, dies natalis, atau pernyataan akademis tanpa data empiris kejadian di lapangan Kota Bandung.
+           - Berita harga nasional (Kemendag/Pusat) yang sama sekali tidak meninjau kondisi pasar di Kota Bandung.
         
-        Kembalikan HANYA objek JSON dengan format berikut (tanpa teks tambahan apapun):
-        {{
-        "status_geografi": "...",
-        "entitas_ditemukan": [...],
-        "indikator_perdagangan": "...",
-        "anomali_atau_hidden_agenda": "...",
-        "skor_relevansi_bps": 0
-        }}
         Teks Berita:
         {truncated_text}
         """
@@ -347,16 +343,10 @@ class BPS_Canonical_Sentinel:
                 except json.JSONDecodeError: return {"Error": "Format SLM non-JSON"}
             else: return {"Error": f"SLM Status {response.status_code}"}
         except requests.exceptions.RequestException:
-            return {"Error": "Ollama Timeout/Failure.", "status_geografi": "Unknown"}
-
-    # ─────────────────────────────────────────────
-    # OUTPUT
-    # ─────────────────────────────────────────────
+            return {"Error": "Daemon Ollama tertidur / Port tertutup."}
 
     def save_checkpoint(self):
-        if not self.session_data:
-            print("\n[!] Tidak ada data untuk disimpan sesi ini.")
-            return
+        if not self.session_data: return
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         filename = self.export_dir / f"bps_audit_historis_{timestamp}.xlsx"
         df = pd.DataFrame(self.session_data)
@@ -373,10 +363,6 @@ class BPS_Canonical_Sentinel:
                 worksheet.write_url(row_num + 1, url_idx, str(url), string="BACA ARTIKEL")
         writer.close()
 
-        print(f"\n[!] CHECKPOINT SECURED: {len(self.session_data)} Laporan Audit diamankan.")
-        if os.name == 'nt':
-            os.startfile(os.path.abspath(filename))
-
     def _build_search_query(self, site):
         base_query = f'site:{site} "Kota Bandung" (ekspor OR impor OR "bea cukai" OR logistik)'
         if self.args.start: base_query += f' after:{self.args.start}'
@@ -392,33 +378,38 @@ class BPS_Canonical_Sentinel:
         except: return site, []
 
     async def process_article(self, context, entry, site):
+        # ISOLATED LOG BUFFER: Menyimpan riwayat eksekusi artikel ini untuk dicetak serentak di akhir
+        task_log = []
+        
         async with self.browser_semaphore:
             real_url = self._decode_google_url(entry.link)
             
-            # SESSION LOCK: Mencegah tab paralel membuka URL yang persis sama di waktu bersamaan
             async with self.state_lock:
                 if real_url in self.session_active_urls or real_url in self.permanent_visited_urls:
                     return
                 self.session_active_urls.add(real_url)
 
-            # PRE-FLIGHT REJECT: Final, masukkan ke blacklist
+            # PRE-FLIGHT REJECT
             is_rejected, reject_reason = self.is_rejected_preflight(entry.title, real_url)
             if is_rejected:
-                print(f"\n  -> {entry.title[:60]}...")
-                print(f"     [BLOCKED PRE-FLIGHT] {reject_reason}.")
+                task_log.append(f"\n -> {entry.title[:60]}...")
+                task_log.append(f"    [BLOCKED PRE-FLIGHT] {reject_reason}.")
                 await self._commit_to_permanent_blacklist(real_url)
+                
+                async with self.print_lock: print("\n".join(task_log))
                 return
 
-            # MIME REJECT: Final, masukkan ke blacklist
             is_html, mime_reason = await asyncio.to_thread(self.verify_mime_type, real_url)
             if not is_html:
-                print(f"\n  -> {entry.title[:60]}...")
-                print(f"     [BLOCKED] {mime_reason}.")
+                task_log.append(f"\n -> {entry.title[:60]}...")
+                task_log.append(f"    [BLOCKED] {mime_reason}.")
                 await self._commit_to_permanent_blacklist(real_url)
+                
+                async with self.print_lock: print("\n".join(task_log))
                 return
 
             published_date = entry.get("published", "Tanggal Tidak Tersedia")
-            print(f"\n [>] Mengekstraksi [{site}]: {entry.title[:50]}...")
+            task_log.append(f"\n [>] Mengekstraksi [{site}]: {entry.title[:50]}...")
             
             page = await context.new_page()
             await page.route("**/*", self.network_interceptor)
@@ -430,7 +421,16 @@ class BPS_Canonical_Sentinel:
                     await page.wait_for_timeout(2000)
                 except TimeoutError: pass 
                     
-                await self.cloudflare_organic_wait(page)
+                # Cloudflare check tersembunyi, jika CF butuh manual interaction, kita print langsung melewati buffer
+                try:
+                    iframe = await page.wait_for_selector('iframe[src*="cloudflare"], #challenge-running', timeout=4000)
+                    if iframe:
+                        async with self.print_lock:
+                            print(f"\a\n     [!!!] CLOUDFLARE TERDETEKSI pada {page.url[:40]}... Tahan & Centang Captcha!")
+                        await page.wait_for_function("document.querySelector('iframe[src*=\"cloudflare\"]') === null && document.querySelector('#challenge-running') === null", timeout=60000)
+                        await page.wait_for_timeout(3000)
+                except: pass
+
                 await self.execute_hydration_scroll(page)
                 
                 content = await page.content()
@@ -453,11 +453,11 @@ class BPS_Canonical_Sentinel:
                 
                 if is_valid:
                     if char_count > 400:
-                        print(f"     [+] {reason}. Integritas: {char_count} kar.")
+                        task_log.append(f"     [+] {reason}. Integritas: {char_count} kar.")
                         
-                        audit_result = await self.interrogate_with_llama(purified_text)
+                        audit_result = await self.interrogate_with_llama(purified_text, task_log)
                         status_geo = audit_result.get("status_geografi", "Unknown")
-                        print(f"     [SLM JUDGE] Geofencing: {status_geo}")
+                        task_log.append(f"     [SLM JUDGE] Geofencing: {status_geo}")
                         
                         if "Out of Jurisdiction" not in status_geo and "Irrelevant Context" not in status_geo:
                             self.session_data.append({
@@ -473,34 +473,31 @@ class BPS_Canonical_Sentinel:
                                 "Skor": audit_result.get("skor_relevansi_bps", 0),
                                 "Teks": purified_text[:1500] 
                             })
-                            print("     [SECURED] Lolos audit BPS & SLM.")
+                            task_log.append(f"     [SECURED] Lolos audit BPS. Tautan: {real_url}")
                             pacing_type = "normal" 
-                            
-                            # [DETERMINISTIK]: Ekstraksi sukses. Catat permanen.
                             await self._commit_to_permanent_blacklist(real_url)
                         else:
-                            print(f"     [REJECTED] SLM Menolak: {status_geo}")
+                            task_log.append(f"     [REJECTED] SLM Menolak: {status_geo}")
                             pacing_type = "normal" 
-                            
-                            # [DETERMINISTIK]: Ditolak SLM. Catat permanen.
                             await self._commit_to_permanent_blacklist(real_url)
                     else:
-                        print(f"     [SKIPPED] Teks kerdil ({char_count} kar). Indikasi Paywall/Error Load.")
+                        task_log.append(f"     [SKIPPED] Teks kerdil ({char_count} kar). Indikasi Paywall/Error Load.")
                         pacing_type = "fast"
-                        # KONDISI: Jangan dicatat permanen! Biarkan skrip mencoba lagi di run berikutnya.
                 else:
-                    print(f"     [SKIPPED] {reason}")
+                    task_log.append(f"     [SKIPPED] {reason}")
                     pacing_type = "fast"
-                    # KONDISI: Ditolak Lexical. Catat permanen.
                     await self._commit_to_permanent_blacklist(real_url)
 
             except Exception as e:
                 if "TargetClosedError" not in str(e) and "has been closed" not in str(e):
-                    print(f"     [ERROR Ekstraksi] {e}")
+                    task_log.append(f"     [ERROR Ekstraksi] {e}")
                 pacing_type = "fast"
-                # KONDISI: Terjadi error Playwright. JANGAN dicatat permanen.
             finally:
                 if not page.is_closed(): await page.close()
+                
+                # Coret log ke terminal secara utuh tanpa terputus thread lain
+                async with self.print_lock:
+                    print("\n".join(task_log))
                 
                 if pacing_type == "normal":
                     await asyncio.sleep(random.uniform(3.0, 5.0))
@@ -512,7 +509,7 @@ class BPS_Canonical_Sentinel:
             sys.exit(1)
 
         print("\n" + "="*75)
-        print(" SURGICAL DEBUGGER V63 | THE CANONICAL SENTINEL")
+        print(" SURGICAL DEBUGGER V64 | THE SYNCHRONIZED SENTINEL")
         if self.args.start or self.args.end:
             print(f" Rentang Waktu: {self.args.start} hingga {self.args.end}")
         print("="*75)
@@ -527,7 +524,7 @@ class BPS_Canonical_Sentinel:
         for site, entries in rss_results:
             all_entries.extend([(site, e) for e in entries[:15]]) 
             
-        print(f"[RADAR] Menemukan {len(all_entries)} target potensial. Memulai pembedahan asinkron...")
+        print(f"[RADAR] Menemukan {len(all_entries)} target potensial. Memulai pembedahan asinkron...\n")
 
         context = None
         try:
@@ -561,4 +558,4 @@ if __name__ == "__main__":
     parser.add_argument('--end', type=str, default='', help='Format: YYYY-MM-DD')
     args = parser.parse_args()
     
-    asyncio.run(BPS_Canonical_Sentinel(args).run())
+    asyncio.run(BPS_Synchronized_Sentinel(args).run())

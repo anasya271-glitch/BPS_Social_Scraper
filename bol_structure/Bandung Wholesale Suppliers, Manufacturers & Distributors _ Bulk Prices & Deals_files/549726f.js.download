@@ -1,1 +1,0 @@
-String.prototype.toTitleCase=function toTitleCase(){return(this.toLowerCase()+"").replace(/^([a-z\u00E0-\u00FC])|\s+([a-z\u00E0-\u00FC])/g,function($1){return $1.toUpperCase()})};if(!String.prototype.trim){String.prototype.trim=function(){return this.replace(/^[\s\uFEFF\xA0]+|[\s\uFEFF\xA0]+$/g,"")}}
