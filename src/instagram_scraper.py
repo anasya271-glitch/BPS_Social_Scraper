@@ -59,33 +59,48 @@ class BPSMultimodalScraper:
         self.keywords = {
             "realisasi_pengeluaran_sosial": [
                 r"\btersalurkan\b", r"\brealisasi\b", r"\bdistribusi\b", r"\bpenyaluran\b", 
-                r"\bpenyerahan sumbangan\b", r"\bmenyerahkan bantuan\b", r"\bpaket makanan\b",
-                r"\bpangan yatim\b", r"\bbantuan operasional\b", r"\bsumbangan dana\b"
+                r"\bpenyerahan[- ]?sumbangan\b", r"\bmenyerahkan[- ]?bantuan\b", r"\bpaket[- ]?makanan\b",
+                r"\bpangan[- ]?yatim\b", r"\bbantuan[- ]?operasional\b", r"\bsumbangan[- ]?dana\b"
             ],
             "kampanye_fundraising": [
-                r"\byuk donasi\b", r"\bscan qris\b", r"\bsalurkan donasi\b", r"\btransfer ke\b",
-                r"\bopen donasi\b", r"\brekening donasi\b", r"\btunaikan zakat\b", r"\bbayar zakat\b",
-                r"\bsedekah\b", r"\binfaq\b", r"\bgalang dana\b", r"\bklik link\b"
+                r"\byuk[- ]?donasi\b", r"\bscan[- ]?qris\b", r"\bsalurkan[- ]?donasi\b", r"\btransfer[- ]?ke\b",
+                r"\bopen[- ]?donasi\b", r"\brekening[- ]?donasi\b", r"\btunaikan[- ]?zakat\b", r"\bbayar[- ]?zakat\b",
+                r"\bsedekah\b", r"\binfaq\b", r"\bgalang[- ]?dana\b", r"\bklik[- ]?link\b"
             ],
             "advokasi_dan_pekerja": [
-                r"\bpetisi\b", r"\bsikap\b", r"\bregulasi\b", r"\btolak\b", r"\bserikat pekerja\b",
-                r"\brealita miris\b", r"\beksploitasi\b", r"\bdimanipulasi\b", r"\bkesejahteraan\b",
-                r"\bnasib para\b", r"\bkebutuhan hidup layak\b", r"\baudiensi\b", r"\btuntutan\b"
+                r"\bpetisi\b", r"\bsikap\b", r"\bregulasi\b", r"\btolak\b", r"\bserikat[- ]?pekerja\b",
+                r"\brealita[- ]?miris\b", r"\beksploitasi\b", r"\bdimanipulasi\b", r"\bkesejahteraan\b",
+                r"\bnasib[- ]?para\b", r"\bkebutuhan[- ]?hidup[- ]?layak\b", r"\baudiensi\b", r"\btuntutan\b"
             ],
             "konsolidasi_dan_politik": [
-                r"\bverifikasi faktual\b", r"\bkpu\b", r"\bbawaslu\b", r"\bsilaturahmi\b",
-                r"\bpenyerahan sk\b", r"\bpelantikan pengurus\b", r"\bpimda\b", r"\bdpc\b",
-                r"\brakercab\b", r"\bkonsolidasi\b", r"\bsambangi\b", r"\bwali kota\b"
+                r"\bverifikasi[- ]?faktual\b", r"\bkpu\b", r"\bbawaslu\b", r"\bsilaturahmi\b",
+                r"\bpenyerahan[- ]?sk\b", r"\bpelantikan[- ]?pengurus\b", r"\bpimda\b", r"\bdpc\b",
+                r"\brakercab\b", r"\bkonsolidasi\b", r"\bsambangi\b", r"\bwali[- ]?kota\b"
             ],
             "edukasi_religi_dan_hari_besar": [
-                r"\bhukum zakat\b", r"\bkeutamaan\b", r"\bpahala\b", r"\bdalil\b",
-                r"\bmarhaban ya ramadan\b", r"\bibadah puasa\b", r"\bidul fitri\b",
-                r"\bhewan qurban\b", r"\bpenyembelihan\b", r"\bhikmah\b", r"\bberkah\b", r"\bsyariat\b"
+                r"\bhukum[- ]?zakat\b", r"\bkeutamaan\b", r"\bpahala\b", r"\bdalil\b",
+                r"\bmarhaban[- ]?ya[- ]?ramadan\b", r"\bibadah[- ]?puasa\b", r"\bidul[- ]?fitri\b",
+                r"\bhewan[- ]?qurban\b", r"\bpenyembelihan\b", r"\bhikmah\b", r"\bberkah\b", r"\bsyariat\b"
             ],
             "simpati_dan_duka_cita": [
-                r"\bturut berduka cita\b", r"\bberpulangnya ke rahmatullah\b", r"\bwafatnya\b",
-                r"\bamal ibadahnya diterima\b", r"\bkeluarga yang ditinggalkan\b", r"\bketabahan\b",
-                r"\bhusnul khotimah\b"
+                r"\bturut[- ]?berduka[- ]?cita\b", r"\bberpulangnya[- ]?ke[- ]?rahmatullah\b", r"\bwafatnya\b",
+                r"\bamal[- ]?ibadahnya[- ]?diterima\b", r"\bkeluarga[- ]?yang[- ]?ditinggalkan\b", r"\bketabahan\b",
+                r"\bhusnul[- ]?kh[oa]timah\b" # Mengcover husnul khotimah, husnulkhatimah, husnul-khotimah
+            ],
+            "kegiatan_reuni_dan_event": [
+                r"\breuni[- ]?akbar\b", r"\btemu[- ]?kangen\b", r"\bhalal[- ]?bihalal\b", # Mengcover halal bihalal, halalbihalal, halal-bihalal
+                r"\bmubes\b", r"\bmusyawarah[- ]?besar\b", r"\btiket[- ]?masuk\b", 
+                r"\bkongres\b", r"\bgathering[- ]?alumni\b", r"\bjalan[- ]?sehat\b",
+                r"\bturnamen[- ]?golf\b", r"\bcharity[- ]?golf\b"
+            ],
+            "program_beasiswa_dan_pendidikan": [
+                r"\bpenyaluran[- ]?beasiswa\b", r"\bdana[- ]?abadi\b", r"\bdonasi[- ]?beasiswa\b", 
+                r"\bbantuan[- ]?ukt\b", r"\bmahasiswa[- ]?berprestasi\b", r"\bawardee\b",
+                r"\bpembayaran[- ]?ukt\b", r"\bpeduli[- ]?pendidikan\b"
+            ],
+            "penjualan_merchandise": [
+                r"\bpre[- ]?order\b", r"\bopen[- ]?po\b", r"\bmerchandise[- ]?resmi\b", 
+                r"\bkaos[- ]?alumni\b", r"\bjaket[- ]?alumni\b", r"\bsouvenir\b", r"\bharga[- ]?spesial\b"
             ]
         }
         # =====================================================================

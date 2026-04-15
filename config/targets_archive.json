@@ -233,6 +233,522 @@
             "category": "LSM / NGO",
             "priority": "high",
             "expected_activities": ["advokasi_kebijakan", "laporan_institusional", "publikasi_riset"]
+        },
+        {
+            "username": "alumni_univtelkom",
+            "category": "Ikatan Alumni",
+            "priority": "medium",
+            "expected_activities": ["kegiatan_reuni_dan_event", "program_beasiswa", "kampanye_fundraising", "penjualan_merchandise"]
+        },
+        {
+            "username": "ikalpolmanbandung",
+            "category": "Ikatan Alumni",
+            "priority": "medium",
+            "expected_activities": ["kegiatan_reuni_dan_event", "program_beasiswa", "kampanye_fundraising", "penjualan_merchandise"]
+        },
+        {
+            "username": "ikasman2bandung",
+            "category": "Ikatan Alumni",
+            "priority": "medium",
+            "expected_activities": ["kegiatan_reuni_dan_event", "program_beasiswa", "kampanye_fundraising", "penjualan_merchandise"]
+        },
+        {
+            "username": "@alumnisma5bandung",
+            "category": "Ikatan Alumni",
+            "priority": "medium",
+            "expected_activities": ["kegiatan_reuni_dan_event", "program_beasiswa", "kampanye_fundraising", "penjualan_merchandise"]
+        },
+        {
+            "username": "@inilima.bandung",
+            "category": "Ikatan Alumni",
+            "priority": "medium",
+            "expected_activities": ["kegiatan_reuni_dan_event", "program_beasiswa", "kampanye_fundraising", "penjualan_merchandise"]
+        },
+        {
+            "username": "sman17_bdg",
+            "category": "Ikatan Alumni",
+            "priority": "medium",
+            "expected_activities": ["kegiatan_reuni_dan_event", "program_beasiswa", "kampanye_fundraising", "penjualan_merchandise"]
+        },
+        {
+            "username": "@iatop",
+            "category": "Ikatan Alumni",
+            "priority": "medium",
+            "expected_activities": ["kegiatan_reuni_dan_event", "program_beasiswa", "kampanye_fundraising", "penjualan_merchandise"]
+        },
+        {
+            "username": "@ikafhunpad",
+            "category": "Ikatan Alumni",
+            "priority": "medium",
+            "expected_activities": ["kegiatan_reuni_dan_event", "program_beasiswa", "kampanye_fundraising", "penjualan_merchandise"]
+        },
+        {
+            "username": "@ika.fikomunpad",
+            "category": "Ikatan Alumni",
+            "priority": "medium",
+            "expected_activities": ["kegiatan_reuni_dan_event", "program_beasiswa", "kampanye_fundraising", "penjualan_merchandise"]
+        },
+        {
+            "username": "@ikaunpad",
+            "category": "Ikatan Alumni",
+            "priority": "medium",
+            "expected_activities": ["kegiatan_reuni_dan_event", "program_beasiswa", "kampanye_fundraising", "penjualan_merchandise"]
+        },
+        {
+            "username": "@ika.fikomunpad",
+            "category": "Ikatan Alumni",
+            "priority": "medium",
+            "expected_activities": ["kegiatan_reuni_dan_event", "program_beasiswa", "kampanye_fundraising", "penjualan_merchandise"]
+        },
+        {
+            "username": "@ikafebunpad",
+            "category": "Ikatan Alumni",
+            "priority": "medium",
+            "expected_activities": ["kegiatan_reuni_dan_event", "program_beasiswa", "kampanye_fundraising", "penjualan_merchandise"]
+        },
+        {
+            "username": "@iaunisba",
+            "category": "Ikatan Alumni",
+            "priority": "medium",
+            "expected_activities": ["kegiatan_reuni_dan_event", "program_beasiswa", "kampanye_fundraising", "penjualan_merchandise"]
+        },
+        {
+            "username": "@ikapolban_official",
+            "category": "Ikatan Alumni",
+            "priority": "medium",
+            "expected_activities": ["kegiatan_reuni_dan_event", "program_beasiswa", "kampanye_fundraising", "penjualan_merchandise"]
+        },
+        {
+            "username": "@ikasma3bdg",
+            "category": "Ikatan Alumni",
+            "priority": "medium",
+            "expected_activities": ["kegiatan_reuni_dan_event", "program_beasiswa", "kampanye_fundraising", "penjualan_merchandise"]
+        },
+        {
+            "username": "@ika.smansa.bdg",
+            "category": "Ikatan Alumni",
+            "priority": "medium",
+            "expected_activities": ["kegiatan_reuni_dan_event", "program_beasiswa", "kampanye_fundraising", "penjualan_merchandise"]
+        },
+        {
+            "username": "@ikasman10_official",
+            "category": "Ikatan Alumni",
+            "priority": "medium",
+            "expected_activities": ["kegiatan_reuni_dan_event", "program_beasiswa", "kampanye_fundraising", "penjualan_merchandise"]
+        },
+        {
+            "username": "@ikalibels",
+            "category": "Ikatan Alumni",
+            "priority": "medium",
+            "expected_activities": ["kegiatan_reuni_dan_event", "program_beasiswa", "kampanye_fundraising", "penjualan_merchandise"]
+        },
+        {
+            "username": "@ikasman14bandung",
+            "category": "Ikatan Alumni",
+            "priority": "medium",
+            "expected_activities": ["kegiatan_reuni_dan_event", "program_beasiswa", "kampanye_fundraising", "penjualan_merchandise"]
+        },
+        {
+            "username": "@ikatanalumniupi",
+            "category": "Ikatan Alumni",
+            "priority": "medium",
+            "expected_activities": ["kegiatan_reuni_dan_event", "program_beasiswa", "kampanye_fundraising", "penjualan_merchandise"]
+        },
+        {
+            "username": "@ikasmp3bandung",
+            "category": "Ikatan Alumni",
+            "priority": "medium",
+            "expected_activities": ["kegiatan_reuni_dan_event", "program_beasiswa", "kampanye_fundraising", "penjualan_merchandise"]
+        },
+        {
+            "username": "@alumnismpn22bdg",
+            "category": "Ikatan Alumni",
+            "priority": "medium",
+            "expected_activities": ["kegiatan_reuni_dan_event", "program_beasiswa", "kampanye_fundraising", "penjualan_merchandise"]
+        },
+        {
+            "username": "@alumnismpn9bandung",
+            "category": "Ikatan Alumni",
+            "priority": "medium",
+            "expected_activities": ["kegiatan_reuni_dan_event", "program_beasiswa", "kampanye_fundraising", "penjualan_merchandise"]
+        },
+        {
+            "username": "@kabisa8_official",
+            "category": "Ikatan Alumni",
+            "priority": "medium",
+            "expected_activities": ["kegiatan_reuni_dan_event", "program_beasiswa", "kampanye_fundraising", "penjualan_merchandise"]
+        },
+        {
+            "username": "@ika_smpn40bdg",
+            "category": "Ikatan Alumni",
+            "priority": "medium",
+            "expected_activities": ["kegiatan_reuni_dan_event", "program_beasiswa", "kampanye_fundraising", "penjualan_merchandise"]
+        },
+        {
+            "username": "@smppasundan7",
+            "category": "Ikatan Alumni",
+            "priority": "medium",
+            "expected_activities": ["kegiatan_reuni_dan_event", "program_beasiswa", "kampanye_fundraising", "penjualan_merchandise"]
+        },
+        {
+            "username": "@ikatanalumniupi",
+            "category": "Ikatan Alumni",
+            "priority": "medium",
+            "expected_activities": ["kegiatan_reuni_dan_event", "program_beasiswa", "kampanye_fundraising", "penjualan_merchandise"]
+        },
+        {
+            "username": "pssi.kota.bdg",
+            "category": "Perkumpulan/Asosiasi (Volunteer Movement)",
+            "priority": "high",
+            "expected_activities": ["manajemen_relawan", "realisasi_pengeluaran", "kemitraan_strategis"]
+        },
+        {
+            "username": "asosiasigurupianobdg",
+            "category": "Perkumpulan/Asosiasi (Volunteer Movement)",
+            "priority": "high",
+            "expected_activities": ["manajemen_relawan", "realisasi_pengeluaran", "kemitraan_strategis"]
+        },
+        {
+            "username": "mubaligh_bandung17",
+            "category": "Perkumpulan/Asosiasi (Volunteer Movement)",
+            "priority": "high",
+            "expected_activities": ["manajemen_relawan", "realisasi_pengeluaran", "kemitraan_strategis"]
+        },
+        {
+            "username": "pbikotabdg",
+            "category": "Perkumpulan/Asosiasi (Volunteer Movement)",
+            "priority": "high",
+            "expected_activities": ["manajemen_relawan", "realisasi_pengeluaran", "kemitraan_strategis"]
+        },
+        {
+            "username": "kabar.persis.surban",
+            "category": "Perkumpulan/Asosiasi (Volunteer Movement)",
+            "priority": "high",
+            "expected_activities": ["manajemen_relawan", "realisasi_pengeluaran", "kemitraan_strategis"]
+        },
+        {
+            "username": "ipbi.dpc.bandung",
+            "category": "Perkumpulan/Asosiasi (Volunteer Movement)",
+            "priority": "high",
+            "expected_activities": ["manajemen_relawan", "realisasi_pengeluaran", "kemitraan_strategis"]
+        },
+        {
+            "username": "kadin.bandung",
+            "category": "Perkumpulan/Asosiasi (Volunteer Movement)",
+            "priority": "high",
+            "expected_activities": ["manajemen_relawan", "realisasi_pengeluaran", "kemitraan_strategis"]
+        },
+        {
+            "username": "bpdasephijabar",
+            "category": "Perkumpulan/Asosiasi (Volunteer Movement)",
+            "priority": "high",
+            "expected_activities": ["manajemen_relawan", "realisasi_pengeluaran", "kemitraan_strategis"]
+        },
+        {
+            "username": "ikpibandung",
+            "category": "Perkumpulan/Asosiasi (Volunteer Movement)",
+            "priority": "high",
+            "expected_activities": ["manajemen_relawan", "realisasi_pengeluaran", "kemitraan_strategis"]
+        },
+        {
+            "username": "dpdhpijabar",
+            "category": "Perkumpulan/Asosiasi (Volunteer Movement)",
+            "priority": "high",
+            "expected_activities": ["manajemen_relawan", "realisasi_pengeluaran", "kemitraan_strategis"]
+        },
+        {
+            "username": "apsi_jabar",
+            "category": "Perkumpulan/Asosiasi (Volunteer Movement)",
+            "priority": "high",
+            "expected_activities": ["manajemen_relawan", "realisasi_pengeluaran", "kemitraan_strategis"]
+        },
+        {
+            "username": "startupbandung",
+            "category": "Perkumpulan/Asosiasi (Volunteer Movement)",
+            "priority": "high",
+            "expected_activities": ["manajemen_relawan", "realisasi_pengeluaran", "kemitraan_strategis"]
+        },
+        {
+            "username": "flpoke",
+            "category": "Perkumpulan/Asosiasi (Volunteer Movement)",
+            "priority": "high",
+            "expected_activities": ["manajemen_relawan", "realisasi_pengeluaran", "kemitraan_strategis"]
+        },
+        {
+            "username": "bandungmagicassociation_",
+            "category": "Perkumpulan/Asosiasi (Volunteer Movement)",
+            "priority": "high",
+            "expected_activities": ["manajemen_relawan", "realisasi_pengeluaran", "kemitraan_strategis"]
+        },
+        {
+            "username": "dpcaai_bdg",
+            "category": "Perkumpulan/Asosiasi (Volunteer Movement)",
+            "priority": "high",
+            "expected_activities": ["manajemen_relawan", "realisasi_pengeluaran", "kemitraan_strategis"]
+        },
+        {
+            "username": "peradibandung_official",
+            "category": "Perkumpulan/Asosiasi (Volunteer Movement)",
+            "priority": "high",
+            "expected_activities": ["manajemen_relawan", "realisasi_pengeluaran", "kemitraan_strategis"]
+        },
+        {
+            "username": "assi.or.id",
+            "category": "Perkumpulan/Asosiasi (Volunteer Movement)",
+            "priority": "high",
+            "expected_activities": ["manajemen_relawan", "realisasi_pengeluaran", "kemitraan_strategis"]
+        },
+        {
+            "username": "perkin_kinologi",
+            "category": "Perkumpulan/Asosiasi (Volunteer Movement)",
+            "priority": "high",
+            "expected_activities": ["manajemen_relawan", "realisasi_pengeluaran", "kemitraan_strategis"]
+        },
+        {
+            "username": "tab.bandung",
+            "category": "Perkumpulan/Asosiasi (Volunteer Movement)",
+            "priority": "high",
+            "expected_activities": ["manajemen_relawan", "realisasi_pengeluaran", "kemitraan_strategis"]
+        },
+        {
+            "username": "himpsijabar",
+            "category": "Perkumpulan/Asosiasi (Volunteer Movement)",
+            "priority": "high",
+            "expected_activities": ["manajemen_relawan", "realisasi_pengeluaran", "kemitraan_strategis"]
+        },
+        {
+            "username": "hipmi.bdg",
+            "category": "Perkumpulan/Asosiasi (Volunteer Movement)",
+            "priority": "high",
+            "expected_activities": ["manajemen_relawan", "realisasi_pengeluaran", "kemitraan_strategis"]
+        },
+        {
+            "username": "apindo.jabar",
+            "category": "Perkumpulan/Asosiasi (Volunteer Movement)",
+            "priority": "high",
+            "expected_activities": ["manajemen_relawan", "realisasi_pengeluaran", "kemitraan_strategis"]
+        },
+        {
+            "username": "tda_bandung",
+            "category": "Perkumpulan/Asosiasi (Volunteer Movement)",
+            "priority": "high",
+            "expected_activities": ["manajemen_relawan", "realisasi_pengeluaran", "kemitraan_strategis"]
+        },
+        {
+            "username": "akarjawabarat",
+            "category": "Perkumpulan/Asosiasi (Volunteer Movement)",
+            "priority": "high",
+            "expected_activities": ["manajemen_relawan", "realisasi_pengeluaran", "kemitraan_strategis"]
+        },
+        {
+            "username": "phrijawabarat",
+            "category": "Perkumpulan/Asosiasi (Volunteer Movement)",
+            "priority": "high",
+            "expected_activities": ["manajemen_relawan", "realisasi_pengeluaran", "kemitraan_strategis"]
+        },
+        {
+            "username": "asitajabar",
+            "category": "Perkumpulan/Asosiasi (Volunteer Movement)",
+            "priority": "high",
+            "expected_activities": ["manajemen_relawan", "realisasi_pengeluaran", "kemitraan_strategis"]
+        },
+        {
+            "username": "bpdgapensijawabarat",
+            "category": "Perkumpulan/Asosiasi (Volunteer Movement)",
+            "priority": "high",
+            "expected_activities": ["manajemen_relawan", "realisasi_pengeluaran", "kemitraan_strategis"]
+        },
+        {
+            "username": "apersijabar_official",
+            "category": "Perkumpulan/Asosiasi (Volunteer Movement)",
+            "priority": "high",
+            "expected_activities": ["manajemen_relawan", "realisasi_pengeluaran", "kemitraan_strategis"]
+        },
+        {
+            "username": "komunitasaleut",
+            "category": "Perkumpulan/Asosiasi (Volunteer Movement)",
+            "priority": "high",
+            "expected_activities": ["manajemen_relawan", "realisasi_pengeluaran", "kemitraan_strategis"]
+        },
+        {
+            "username": "aimi_jabar",
+            "category": "Perkumpulan/Asosiasi (Volunteer Movement)",
+            "priority": "high",
+            "expected_activities": ["manajemen_relawan", "realisasi_pengeluaran", "kemitraan_strategis"]
+        },
+        {
+            "username": "dpciwapikotabandung",
+            "category": "Perkumpulan/Asosiasi (Volunteer Movement)",
+            "priority": "high",
+            "expected_activities": ["manajemen_relawan", "realisasi_pengeluaran", "kemitraan_strategis"]
+        },
+        {
+            "username": "apjikotabandung",
+            "category": "Perkumpulan/Asosiasi (Volunteer Movement)",
+            "priority": "high",
+            "expected_activities": ["manajemen_relawan", "realisasi_pengeluaran", "kemitraan_strategis"]
+        },
+        {
+            "username": "prssnibandung",
+            "category": "Perkumpulan/Asosiasi (Volunteer Movement)",
+            "priority": "high",
+            "expected_activities": ["manajemen_relawan", "realisasi_pengeluaran", "kemitraan_strategis"]
+        },
+        {
+            "username": "hippi.bdg",
+            "category": "Perkumpulan/Asosiasi (Volunteer Movement)",
+            "priority": "high",
+            "expected_activities": ["manajemen_relawan", "realisasi_pengeluaran", "kemitraan_strategis"]
+        },
+        {
+            "username": "gapeksindojawabarat",
+            "category": "Perkumpulan/Asosiasi (Volunteer Movement)",
+            "priority": "high",
+            "expected_activities": ["manajemen_relawan", "realisasi_pengeluaran", "kemitraan_strategis"]
+        },
+        {
+            "username": "gpfarmasi_jabar",
+            "category": "Perkumpulan/Asosiasi (Volunteer Movement)",
+            "priority": "high",
+            "expected_activities": ["manajemen_relawan", "realisasi_pengeluaran", "kemitraan_strategis"]
+        },
+        {
+            "username": "gakeslabjabar",
+            "category": "Perkumpulan/Asosiasi (Volunteer Movement)",
+            "priority": "high",
+            "expected_activities": ["manajemen_relawan", "realisasi_pengeluaran", "kemitraan_strategis"]
+        },
+        {
+            "username": "dpdorgandajawabarat",
+            "category": "Perkumpulan/Asosiasi (Volunteer Movement)",
+            "priority": "high",
+            "expected_activities": ["manajemen_relawan", "realisasi_pengeluaran", "kemitraan_strategis"]
+        },
+        {
+            "username": "perkindojabar",
+            "category": "Perkumpulan/Asosiasi (Volunteer Movement)",
+            "priority": "high",
+            "expected_activities": ["manajemen_relawan", "realisasi_pengeluaran", "kemitraan_strategis"]
+        },
+        {
+            "username": "amabandung",
+            "category": "Perkumpulan/Asosiasi (Volunteer Movement)",
+            "priority": "high",
+            "expected_activities": ["manajemen_relawan", "realisasi_pengeluaran", "kemitraan_strategis"]
+        },
+        {
+            "username": "dpp_inkindo_jabar",
+            "category": "Perkumpulan/Asosiasi (Volunteer Movement)",
+            "priority": "high",
+            "expected_activities": ["manajemen_relawan", "realisasi_pengeluaran", "kemitraan_strategis"]
+        },
+        {
+            "username": "apji.dpdjabar",
+            "category": "Perkumpulan/Asosiasi (Volunteer Movement)",
+            "priority": "high",
+            "expected_activities": ["manajemen_relawan", "realisasi_pengeluaran", "kemitraan_strategis"]
+        },
+        {
+            "username": "reijabar",
+            "category": "Perkumpulan/Asosiasi (Volunteer Movement)",
+            "priority": "high",
+            "expected_activities": ["manajemen_relawan", "realisasi_pengeluaran", "kemitraan_strategis"]
+        },
+        {
+            "username": "asitajabar",
+            "category": "Perkumpulan/Asosiasi (Volunteer Movement)",
+            "priority": "high",
+            "expected_activities": ["manajemen_relawan", "realisasi_pengeluaran", "kemitraan_strategis"]
+        },
+        {
+            "username": "ikapi_jawa_barat",
+            "category": "Perkumpulan/Asosiasi (Volunteer Movement)",
+            "priority": "high",
+            "expected_activities": ["manajemen_relawan", "realisasi_pengeluaran", "kemitraan_strategis"]
+        },
+        {
+            "username": "aprindojabar",
+            "category": "Perkumpulan/Asosiasi (Volunteer Movement)",
+            "priority": "high",
+            "expected_activities": ["manajemen_relawan", "realisasi_pengeluaran", "kemitraan_strategis"]
+        },
+        {
+            "username": "apnateljabar",
+            "category": "Perkumpulan/Asosiasi (Volunteer Movement)",
+            "priority": "high",
+            "expected_activities": ["manajemen_relawan", "realisasi_pengeluaran", "kemitraan_strategis"]
+        },
+        {
+            "username": "ketimbang.ngemis.bandung",
+            "category": "Perkumpulan/Asosiasi (Volunteer Movement)",
+            "priority": "medium",
+            "expected_activities": ["manajemen_relawan", "realisasi_pengeluaran", "kemitraan_strategis"]
+        },
+        {
+            "username": "tamanrelawan.bandung",
+            "category": "Perkumpulan/Asosiasi (Volunteer Movement)",
+            "priority": "medium",
+            "expected_activities": ["manajemen_relawan", "realisasi_pengeluaran", "kemitraan_strategis"]
+        },
+        {
+            "username": "gesit_kotabandung",
+            "category": "Perkumpulan/Asosiasi (Volunteer Movement)",
+            "priority": "medium",
+            "expected_activities": ["manajemen_relawan", "realisasi_pengeluaran", "kemitraan_strategis"]
+        },
+        {
+            "username": "sobatsport.id",
+            "category": "Perkumpulan/Asosiasi (Volunteer Movement)",
+            "priority": "medium",
+            "expected_activities": ["manajemen_relawan", "realisasi_pengeluaran", "kemitraan_strategis"]
+        },
+        {
+            "username": "edansepurbd",
+            "category": "Perkumpulan/Asosiasi (Volunteer Movement)",
+            "priority": "medium",
+            "expected_activities": ["manajemen_relawan", "realisasi_pengeluaran", "kemitraan_strategis"]
+        },
+        {
+            "username": "babaturun.bdg",
+            "category": "Perkumpulan/Asosiasi (Volunteer Movement)",
+            "priority": "medium",
+            "expected_activities": ["manajemen_relawan", "realisasi_pengeluaran", "kemitraan_strategis"]
+        },
+        {
+            "username": "kawanbergerak",
+            "category": "Perkumpulan/Asosiasi (Volunteer Movement)",
+            "priority": "medium",
+            "expected_activities": ["manajemen_relawan", "realisasi_pengeluaran", "kemitraan_strategis"]
+        },
+        {
+            "username": "komunitasbermainbandung.id",
+            "category": "Perkumpulan/Asosiasi (Volunteer Movement)",
+            "priority": "medium",
+            "expected_activities": ["manajemen_relawan", "realisasi_pengeluaran", "kemitraan_strategis"]
+        },
+        {
+            "username": "kiniminton.bdg",
+            "category": "Perkumpulan/Asosiasi (Volunteer Movement)",
+            "priority": "medium",
+            "expected_activities": ["manajemen_relawan", "realisasi_pengeluaran", "kemitraan_strategis"]
+        },
+        {
+            "username": "beasiswauinbandung",
+            "category": "Perkumpulan/Asosiasi (Volunteer Movement)",
+            "priority": "medium",
+            "expected_activities": ["manajemen_relawan", "realisasi_pengeluaran", "kemitraan_strategis"]
+        },
+        {
+            "username": "komunitasreptilbandung",
+            "category": "Perkumpulan/Asosiasi (Volunteer Movement)",
+            "priority": "medium",
+            "expected_activities": ["manajemen_relawan", "realisasi_pengeluaran", "kemitraan_strategis"]
+        },
+        {
+            "username": "kpj_bandung",
+            "category": "Perkumpulan/Asosiasi (Volunteer Movement)",
+            "priority": "high",
+            "expected_activities": ["manajemen_relawan", "realisasi_pengeluaran", "kemitraan_strategis"]
         }
     ],
     "scraper_settings": {
