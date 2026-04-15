@@ -210,4 +210,4 @@ python src/instagram_scraper.py --target nama_akun_asosiasi
 
 ***"In God we trust, all others must bring data." — W. Edwards Deming.***
 
-*Dikembangkan untuk keperluan audit data Badan Pusat Statistik (BPS) Kota Bandung.*
+*Proyek ini dikembangkan untuk keperluan audit data Badan Pusat Statistik (BPS) Kota Bandung.*
