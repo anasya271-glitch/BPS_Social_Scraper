@@ -588,4 +588,4 @@ if __name__ == "__main__":
     parser.add_argument('--end', type=str, default='', help='Format: YYYY-MM-DD')
     args = parser.parse_args()
     
-    asyncio.run(BPS_Absolute_Sentinel(args).run())
+    asyncio.run(BPS_BMEI_Sentinel(args).run())
