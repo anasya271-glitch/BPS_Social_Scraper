@@ -2,7 +2,9 @@
 
 -----
 
-# ***Bandung Municipality's Phenomenon Scraper***
+<p align="center">
+  <img src="https://readme-typing-svg.demolab.com?font=Montserrat&weight=800&size=30&duration=2500&pause=500&color=FF8C00&center=true&vCenter=true&width=850&lines=Bandung+Municipality's+Phenomenon+Scraper;+Audit+Statistik+Otomatis;Real-time+Market+Monitoring" />
+</p>
 
 <link rel="stylesheet" href="https://cloudflare.com">
 
@@ -10,15 +12,28 @@
     <i class="fab fa-linkedin" style="font-size:30px; color:#0077B5;"></i>
 </a>
 
-![Python](https://img.shields.io/badge/Python-3.11+-blue?style=flate&logo=python&logoColor=white)
-![Ollama](https://img.shields.io/badge/AI-Ollama%20Local-orange?style=flat&logo=ollama&logoColor=white)
-![License](https://img.shields.io/badge/License-MIT-green?style=flat)
-<br>
-![Build Status](https://img.shields.io/badge/Status-Active%20Investigation-success?style=flat)
-![Data Source](https://img.shields.io/badge/Source-Public%20Domain-blue?style=flat)
-[![LinkedIn](https://img.shields.io/badge/LinkedIn-Connect-blue?style=flat&logo=LinkedIn&logoColor=white)](https://www.linkedin.com/in/anasyanf) 
-[![My Instagram](https://img.shields.io/badge/Instagram-Follow-E4405F?label=%40chiyeonas&style=flat&logo=instagram)](https://www.instagram.com/chiyeonas)
-[![BPS Kota Bandung's Instagram](https://img.shields.io/badge/Instagram-Follow-E4405F?label=%40bps_kota_bandung&style=flat&logo=instagram)](https://www.instagram.com/bps_kota_bandung)
+<p align="center">
+  <img src="https://img.shields.io/badge/Python-3.11+-blue?style=flat&logo=python&logoColor=white" alt="Python Version">
+  <a href="https://ollama.com/">
+    <img src="https://img.shields.io/badge/AI-Ollama%20Local-orange?style=flat&logo=ollama&logoColor=white" alt="Ollama AI">
+  </a>
+  <a href="LICENSE">
+    <img src="https://img.shields.io/badge/License-MIT-green?style=flat" alt="License MIT">
+  </a>
+  <br>
+  <img src="https://img.shields.io/badge/Status-Active%20Investigation-success?style=flat" alt="Build Status">
+  <img src="https://img.shields.io/badge/Source-Public%20Domain-blue?style=flat" alt="Data Source">
+  <br>
+  <a href="https://www.linkedin.com/in/anasyanf">
+    <img src="https://img.shields.io/badge/LinkedIn-Connect-blue?style=flat&logo=LinkedIn&logoColor=white" alt="LinkedIn">
+  </a>
+  <a href="https://www.instagram.com/chiyeonas">
+    <img src="https://img.shields.io/badge/Instagram-Follow-E4405F?label=%40chiyeonas&style=flat&logo=instagram" alt="My Instagram">
+  </a>
+  <a href="https://www.instagram.com/bps_kota_bandung">
+    <img src="https://img.shields.io/badge/Instagram-Follow-E4405F?label=%40bps_kota_bandung&style=flat&logo=instagram" alt="BPS Instagram">
+  </a>
+</p>
 
 
 **Bandung Municipality's Phenomenon Scraper** adalah ekosistem instrumen intelijen data terpadu yang dirancang untuk Badan Pusat Statistik (BPS). Alat ini bertujuan untuk mendeteksi, mengekstraksi, dan melakukan audit otomatis terhadap fenomena ekonomi; khususnya Ekspor, Impor, Logistik, dan Lembaga Non-Profit di wilayah Kota Bandung.
@@ -34,14 +49,14 @@ Sistem ini menggabungkan kekuatan **Asynchronous Web Scraping** dengan **Local S
 - [Development Roadmap](#development-roadmap)
 - [Katalog Instrumen Terpadu](#katalog-instrumen-terpadu)
 - [Prasyarat Sistem](#prasyarat-sistem)
-  - [Spesifikasi Rekomendasi Perangkat Keras atau Hardware](#spesifikasi-rekomendasi-perangkat-keras-atau-hardware)
-  - [Spesifikasi Perangkat Lunak atau Software](#spesifikasi-perangkat-lunak-atau-software)
+  - [Spesifikasi Rekomendasi Perangkat Keras (Hardware)](#1-spesifikasi-rekomendasi-perangkat-keras-hardware)
+  - [Spesifikasi Perangkat Lunak atau (Software)](#2-spesifikasi-perangkat-lunak-software)
 - [Panduan Instalasi](#panduan-instalasi)
-  - [Isolasi Lingkungan atau Virtual Environment](#isolasi-lingkungan-atau-virtual-environment)
-  - [Instalasi Pustaka Inti](#instalasi-pustaka-inti)
-  - [Konfigurasi Browser dan AI](#konfigurasi-browser-dan-AI)
-- [Cara Penggunaan dan Eksekusi](#cara-penggunaan-dan-eksekusi)
-- [Output dan Laporan](#output-dan-laporan)
+  - [Isolasi Lingkungan (Virtual Environment)](#1-isolasi-lingkungan-virtual-environment)
+  - [Instalasi Pustaka Inti](#2-instalasi-pustaka-inti)
+  - [Konfigurasi Browser & AI](#3-konfigurasi-browser--ai)
+- [Cara Penggunaan (Eksekusi)](#cara-penggunaan-eksekusi)
+- [Output & Laporan](#output--laporan)
 - [Catatan Keamanan & Etika](#catatan-keamanan-dan-etika)
 - [Lisensi](#lisensi)
 </details>
@@ -78,21 +93,21 @@ Membangun infrastruktur data yang mampu menjembatani celah antara rilis berita p
 
 ```mermaid
 graph LR
-  subgraph Sources [Pengumpulan Data 🌐 ]
+  subgraph Sources [<b>Pengumpulan Data</b> 🌐 ]
     A[Situs Publik & Media Sosial]
   end
 
-  subgraph Engine [Ekstraksi Data ⚙️ ]
+  subgraph Engine [<b>Ekstraksi Data</b> ⚙️ ]
     B{Mesin Playwright}
     B --> B1[Pengalih Agen Pengguna]
   end
 
-  subgraph Processing [Zona Aman Lokal 🛡️ ]
+  subgraph Processing [<b>Zona Aman Lokal</b> 🛡️ ]
     C[Deduplikasi]
     C --> D[Analisis Ollama AI]
   end
 
-  subgraph Output [Hasil Akhir 📊 ]
+  subgraph Output [<b>Hasil Akhir</b> 📊 ]
     E[Excel Terstruktur]
     F[Catatan Audit]
   end
@@ -102,6 +117,8 @@ graph LR
   D --> E
   D --> F
 
+  classDef largeTitle font-size:24px,fill:none,stroke:none;
+  class Title largeTitle;
   style A fill:#bbdefb,stroke:#1565c0,stroke-width:2px,color:#000
   style B fill:#ffe0b2,stroke:#ef6c00,stroke-width:2px,color:#000
   style B1 fill:#fff9c4,stroke:#fbc02d,stroke-width:2px,color:#000
@@ -242,7 +259,7 @@ python src/instagram_scraper.py --target nama_akun_asosiasi
 
 -----
 
-##  Output dan Laporan
+##  Output & Laporan
 
 #### 📂 `data/exports/`
 
@@ -283,7 +300,7 @@ python src/instagram_scraper.py --target nama_akun_asosiasi
 
 ## Lisensi
 
-*Bandung Municipality's Phenomenon Scraper* dirilis dengan [MIT license](LICENSE).
+*Bandung Municipality's Phenomenon Scraper* dirilis dibawah [MIT license](LICENSE).
 
 -----
 
