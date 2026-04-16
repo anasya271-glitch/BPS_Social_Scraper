@@ -32,14 +32,14 @@ Membangun infrastruktur data yang mampu menjembatani celah antara rilis berita p
 ```text
 📁
 .
-├── config/             # Target & Konfigurasi (Disembunyikan .gitignore)
-├── src/                # Inti mesin
-│   ├── archive/        # Script BETA
-│   └── *.py            # Scraping & AI Logic
-├── data/               # Penyimpanan data lokal (Disembunyikan .gitignore)
-├── .gitignore          # List file dan folder sensitif yang disembunyikan
-├── LICENSE             # Lisensi MIT dalam 2 bahasa
-└── README.md           # Dokumentasi serta deskripsi proyek
+├── 📂 config/             # Target & Konfigurasi (Disembunyikan .gitignore)
+├── 📂 src/                # Inti mesin
+│   ├── 📂 archive/        # Script BETA
+│   └── *.py                # Scraping & AI Logic
+├── 📂 data/               # Penyimpanan data lokal (Disembunyikan .gitignore)
+├── .gitignore              # List file dan folder sensitif yang disembunyikan
+├── 📜 LICENSE             # Lisensi MIT dalam 2 bahasa
+└── 📜 README.md           # Dokumentasi serta deskripsi proyek
 ```
 
 -----
@@ -54,6 +54,13 @@ graph LR
   D --> E[Excel Terstruktur]
   E --> F[Rekomendasi Kebijakan]
 ```
+
+### Ketajaman Metodologi
+
+Singkatnya, sistem ini tidak hanya mengambil data, tetapi melakukan:
+1. Menghapus kebisingan informasi yang tidak relevan dengan inflasi daerah.
+2. Menggunakan jejak profil Edge asli untuk meminimalisir deteksi bot.
+3. Membandingkan lead investigasi dari Instagram dengan berita resmi.
 
 -----
 
@@ -79,11 +86,15 @@ Proyek ini akan terus berkembang:
 | | `BoL_scraper.py` | Pengambil data *Bill of Lading*. | Validasi arus barang fisik melalui dokumen pengapalan global. |
 | | `main_comtrade.py` | Koneksi API UN Comtrade. | Penyediaan data pembanding (*baseline*) statistik internasional. |
 | ***Utility & Auth*** | `auth_setup.py` | Pengelola login browser. | Mengamankan sesi login agar terhindar dari tantangan login berulang. |
+| | `auth_setup.py` | Membuka browser untuk otentikasi manual pertama kali dan menyimpan state (cookies). | Menginisiasi lingkungan otentikasi yang aman daripada hardcode username/password di dalam skrip. |
 | | `idx.py` | Pengelola entri data dan indeks. | Manajemen alur kerja dan pemetaan target sebelum ekstraksi. |
 | | `cek_data_bol.py` | Pengecek integritas manifest. | Memastikan data *Bill of Lading* valid dan bebas duplikasi. |
 | | `reverse_dork.py` | Mesin optimasi pencarian. | Menghasilkan parameter Google Dork yang presisi untuk meminimalkan *noise*. |
 | ***Debugging*** | `llama_debug.py` | Lab pengujian Llama. | Menguji instruksi *prompt* dan format JSON tanpa *scraper* penuh. |
 | | `news_debug.py` | Lab pengujian *parser* teks. | Menguji ketepatan ekstraksi (Ad-Killer) pada portal berita tertentu. |
+
+> [!TIP]
+> Jalankan script `auth_setup.py` terlebih dahulu untuk memastikan *session* yang stabil dan berkelanjutan sebelum menjalankan *scraping tasks* berdurasi panjang.
 
 ---
 
@@ -201,13 +212,14 @@ python src/instagram_scraper.py --target nama_akun_asosiasi
 
 ##  Catatan Keamanan & Etika
 
-  * Skrip ini mengadopsi teknik User-Agent emulation dan sinkronisasi profil autentik untuk memitigasi risiko deteksi otomatis. Pendekatan ini memastikan interaksi dengan infrastruktur web target tetap berada dalam koridor perilaku manusia yang wajar (*human-like behavior*).
-  * Implementasi kontrol konkurensi asinkron dibatasi secara ketat (maksimal dua instansi aktif) untuk menghormati kapasitas server target. Hal ini merupakan bentuk kepatuhan terhadap etika pengumpulan data publik guna mencegah degradasi performa pada sistem penyedia data serta menghindari pemblokiran IP oleh server.
-  * Seluruh pemrosesan Small Language Model (SLM) dan ekstraksi informasi dilakukan secara lokal di perangkat. Tidak ada data mentah maupun hasil analisis investigasi yang ditransmisikan ke server pihak ketiga di luar yurisdiksi nasional, menjamin kerahasiaan penuh sesuai standar keamanan informasi BPS.
-  * Penggunaan perangkat lunak ini ditujukan eksklusif untuk mendukung transparansi dan akuntabilitas sektor publik. Skrip ini tidak dirancang untuk menembus sistem keamanan yang diproteksi, melainkan untuk mengoptimalkan pengawasan data yang tersedia secara publik bagi kepentingan audit negara.
+> [!IMPORTANT]
+>  * Seluruh pemrosesan Small Language Model (SLM) dan ekstraksi informasi dilakukan secara lokal di perangkat. Tidak ada data mentah maupun hasil analisis investigasi yang ditransmisikan ke server pihak ketiga di luar yurisdiksi nasional, menjamin kerahasiaan penuh sesuai standar keamanan informasi BPS.
+>  * Skrip ini mengadopsi teknik User-Agent emulation dan sinkronisasi profil autentik untuk memitigasi risiko deteksi otomatis. Pendekatan ini memastikan interaksi dengan infrastruktur web target tetap berada dalam koridor perilaku manusia yang wajar (*human-like behavior*).
+>  * Implementasi kontrol konkurensi asinkron dibatasi secara ketat (maksimal dua instansi aktif) untuk menghormati kapasitas server target. Hal ini merupakan bentuk kepatuhan terhadap etika pengumpulan data publik guna mencegah degradasi performa pada sistem penyedia data serta menghindari pemblokiran IP oleh server.
+>  * Penggunaan perangkat lunak ini ditujukan eksklusif untuk mendukung transparansi dan akuntabilitas sektor publik. Skrip ini tidak dirancang untuk menembus sistem keamanan yang diproteksi, melainkan untuk mengoptimalkan pengawasan data yang tersedia secara publik bagi kepentingan audit negara.
 
 -----
 
-***"In God we trust, all others must bring data." — W. Edwards Deming.***
+***"In God we trust, all others must bring data. (Kita boleh percaya tuhan secara absolut, yang lain harus membawa data)" — W. Edwards Deming.***
 
 *Proyek ini dikembangkan untuk keperluan audit data Badan Pusat Statistik (BPS) Kota Bandung.*
