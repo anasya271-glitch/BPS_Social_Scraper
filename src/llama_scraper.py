@@ -20,10 +20,10 @@ import warnings
 
 warnings.filterwarnings("ignore")
 
-class BPS_Synchronized_Sentinel:
+class BPS_Absolute_Sentinel:
     """
-    Surgical Debugger V64 | The Synchronized Sentinel
-    Modul aktif: Isolated Log Buffer, Expanded Lexical & Geofencing, Deterministic Caching, Hyperlink Logging.
+    Surgical Debugger V65 | The Absolute Sentinel
+    Modul aktif: Isolated Log Buffer, Aggressive Lexical Filter, Absolute SLM Prompt, Deterministic Caching.
     """
     def __init__(self, args):
         self.args = args
@@ -47,12 +47,11 @@ class BPS_Synchronized_Sentinel:
         
         self.session_data = []
         
-        # State Management
         self.permanent_visited_urls = set()
         self.session_active_urls = set()
         self.new_urls_to_save = []
         self.state_lock = asyncio.Lock()
-        self.print_lock = asyncio.Lock() # Mencegah teks log tumpang tindih di terminal
+        self.print_lock = asyncio.Lock()
         
         self.load_visited_urls()
         
@@ -86,7 +85,7 @@ class BPS_Synchronized_Sentinel:
                     r"\bbekasi\b", r"\bbogor\b", r"\bdepok\b", r"\bkarawang\b", r"\bpurwakarta\b",
                     r"\bsukabumi\b", r"\bciamis\b", r"\btasikmalaya\b", r"\bgarut\b", r"\bcirebon\b",
                     r"\bcianjur\b", r"\bindramayu\b", r"\bmajalengka\b", r"\bsumedang\b", r"\bsubang\b", r"\bkuningan\b",
-                    # Provinsi & Ibukota Lain di Indonesia
+                    # Provinsi & Ibukota Lain
                     r"\bjakarta\b", r"\bdki jakarta\b", r"\bjawa tengah\b", r"\bjateng\b", r"\bsemarang\b",
                     r"\bjawa timur\b", r"\bjatim\b", r"\bsurabaya\b", r"\bmalang\b", r"\bbanten\b", r"\btangerang\b",
                     r"\byogyakarta\b", r"\bdiy\b", r"\bjogja\b", r"\bbali\b", r"\bdenpasar\b",
@@ -127,14 +126,17 @@ class BPS_Synchronized_Sentinel:
                 r"\bbunuh diri\b", r"\bpengeroyokan\b",
                 # Loker & CPNS
                 r"\bcpns\b", r"\blowongan\b", r"\bloker\b", r"\brekrutmen\b",
-                # Akademis, Seminar, Edukasi & Event Kampus
+                # Akademis & Edukasi
                 r"\bkampus\b", r"\buniversitas\b", r"\binstitut\b", r"\bpoliteknik\b", r"\bakademi\b", r"\bsekolah tinggi\b",
                 r"\buin\b", r"\bitb\b", r"\bunpas\b", r"\bunpad\b", r"\bupi\b", r"\btelkom university\b", r"\bunpar\b", r"\bunisba\b",
                 r"\bmahasiswa\b", r"\bdosen\b", r"\bguru besar\b", r"\brektor\b", r"\bdekan\b", 
                 r"\bwisuda\b", r"\bdies natalis\b", r"\bsnbt\b", r"\bppdb\b", r"\bkemendikdasmen\b",
                 r"\bseminar\b", r"\bwebinar\b", r"\bsimposium\b", r"\blokakarya\b", r"\bkonferensi\b", 
                 r"\bsidang terbuka\b", r"\bskripsi\b", r"\btesis\b", r"\bdisertasi\b", r"\bsman\b", r"\bsmpn\b", 
-                r"\bpramuka\b", r"\bjambore\b"
+                r"\bpramuka\b", r"\bjambore\b",
+                # [NEW] Birokrasi Internal & Aturan ASN
+                r"\bmobil dinas\b", r"\bkendaraan dinas\b", r"\baparatur sipil negara\b", r"\basn\b", r"\bwfh\b", 
+                r"\bapel pagi\b", r"\bmutasi jabatan\b", r"\brotasi jabatan\b", r"\bdisiplin pegawai\b", r"\bkinerja asn\b"
             ],
             "TITLE_BLACKLIST": [
                 "pegawai", "sejarah", "visi", "misi", "tupoksi", "kontak", "gallery", 
@@ -229,10 +231,9 @@ class BPS_Synchronized_Sentinel:
             if url_lower.endswith(ext) or (ext + "?" in url_lower): 
                 return True, "Ekstensi Dokumen Non-Naratif"
 
-        # Smart Lexical Override: Jika noise terdeteksi tapi ada indikator DAGANG dan GEO kuat, biarkan SLM yang menilai.
         is_noise = any(re.search(n, title_lower) for n in self.config["NOISE_WORDS"]) or any(re.search(n, combined) for n in self.config["NOISE_WORDS"])
         if is_noise and not (has_strong_anchor and has_trade): 
-            return True, "Terdeteksi Noise Konteks (Akademis/Kriminal/Bencana)"
+            return True, "Terdeteksi Noise Konteks (Akademis/Kriminal/Bencana/Birokrasi)"
         
         is_blacklisted = any(re.search(b, title_lower) for b in self.config["GEOGRAPHY"]["BLACKLIST"])
         if is_blacklisted and not has_strong_anchor: 
@@ -302,9 +303,8 @@ class BPS_Synchronized_Sentinel:
 
         is_noise = any(re.search(n, combined) for n in self.config["NOISE_WORDS"])
         
-        # Override Noise if BOTH Geography and Trade Indicators are undeniably strong
         if is_noise and not (has_strong_anchor and has_trade): 
-            return False, "Terdeteksi Noise Akademis/Kriminal/Bencana (Tanpa Anchor Dagang Kuat)"
+            return False, "Terdeteksi Noise Akademis/Kriminal/Bencana/Birokrasi (Tanpa Anchor Dagang Kuat)"
         
         is_blacklisted = any(re.search(b, combined) for b in self.config["GEOGRAPHY"]["BLACKLIST"])
         if is_blacklisted and not has_strong_anchor: 
@@ -336,15 +336,17 @@ class BPS_Synchronized_Sentinel:
         truncated_text = self.smart_truncate(article_text)
         task_log.append("     [>] Mengirim Smart Context Window ke Hakim SLM (Ollama)...")
         
+        # [NEW] Absolute Rejection Prompt
         custom_prompt = f"""
-        Lakukan audit investigatif pada teks berita berikut untuk kebutuhan data Badan Pusat Statistik (BPS).
+        Lakukan audit investigatif pada teks berita berikut untuk kebutuhan Badan Pusat Statistik (BPS).
+        Keluarkan format JSON MURNI dengan keys: "status_geografi", "entitas_ditemukan", "indikator_perdagangan", "anomali_atau_hidden_agenda", "skor_relevansi_bps".
         
-        ATURAN YURISDIKSI SANGAT PENTING:
-        1. Status Geofencing HARUS "Valid Kota Bandung" JIKA peristiwa riil (arus barang, logistik, harga pasar) terjadi secara fisik di Kota Bandung.
-        2. TOLAK BERITA (Geofencing: "Out of Jurisdiction" atau "Irrelevant Context") JIKA teks tersebut hanya berupa:
-           - Lowongan kerja atau rekrutmen.
-           - Opini, seminar, diskusi kampus, dies natalis, atau pernyataan akademis tanpa data empiris kejadian di lapangan Kota Bandung.
-           - Berita harga nasional (Kemendag/Pusat) yang sama sekali tidak meninjau kondisi pasar di Kota Bandung.
+        ATURAN YURISDIKSI SANGAT PENTING (HUKUM ABSOLUT):
+        1. Status Geofencing HARUS "Valid Kota Bandung" HANYA JIKA peristiwa riil (arus barang, logistik, inflasi pasar) terjadi secara fisik di Kota Bandung.
+        2. TOLAK BERITA (Geofencing: "Out of Jurisdiction" atau "Irrelevant Context") JIKA:
+           - Berita berupa kebijakan administratif internal instansi (seperti aturan penggunaan mobil dinas, jam kerja, WFH, apel pagi, disiplin ASN) yang tidak memengaruhi ketersediaan barang di pasar.
+           - Berupa opini, seminar, diskusi kampus, dies natalis, atau pernyataan akademis tanpa data empiris kejadian di lapangan Kota Bandung.
+           - Merupakan rilis data Kementerian/Pusat (harga nasional/SP2KP) tanpa mencantumkan kondisi lapangan (wawancara pedagang/harga spesifik) di pasar wilayah Kota Bandung.
         
         Teks Berita:
         {truncated_text}
@@ -399,7 +401,6 @@ class BPS_Synchronized_Sentinel:
         except: return site, []
 
     async def process_article(self, context, entry, site, real_url):
-        # Buffer Log terisolasi agar output tidak tumpang tindih
         task_log = []
         link_text = self.format_hyperlink(real_url, "[BACA ARTIKEL]")
         
@@ -440,7 +441,6 @@ class BPS_Synchronized_Sentinel:
                     await page.wait_for_timeout(2000)
                 except TimeoutError: pass 
                     
-                # Eksekusi Cloudflare bypass pasif
                 try:
                     iframe = await page.wait_for_selector('iframe[src*="cloudflare"], #challenge-running', timeout=4000)
                     if iframe:
@@ -514,7 +514,6 @@ class BPS_Synchronized_Sentinel:
             finally:
                 if not page.is_closed(): await page.close()
                 
-                # Cetak log buffer secara atomik ke terminal
                 if task_log:
                     async with self.print_lock:
                         print("\n".join(task_log))
@@ -529,7 +528,7 @@ class BPS_Synchronized_Sentinel:
             sys.exit(1)
 
         print("\n" + "="*75)
-        print(" SURGICAL DEBUGGER V64 | THE SYNCHRONIZED SENTINEL")
+        print(" SURGICAL DEBUGGER V65 | THE ABSOLUTE SENTINEL")
         if self.args.start or self.args.end:
             print(f" Rentang Waktu: {self.args.start} hingga {self.args.end}")
         print("="*75)
@@ -544,7 +543,6 @@ class BPS_Synchronized_Sentinel:
         for site, entries in rss_results:
             all_entries.extend([(site, e) for e in entries[:15]]) 
             
-        # DEDUPLIKASI FASE 1 (Memperbaiki "Silent Exit" Bug)
         new_targets = []
         cached_count = 0
         for site, entry in all_entries:
@@ -594,4 +592,4 @@ if __name__ == "__main__":
     parser.add_argument('--end', type=str, default='', help='Format: YYYY-MM-DD')
     args = parser.parse_args()
     
-    asyncio.run(BPS_Synchronized_Sentinel(args).run())
+    asyncio.run(BPS_Absolute_Sentinel(args).run())
