@@ -2,7 +2,7 @@ activating venv = .\venv\Scripts\Activate.ps1
 
 running scraper = python src/scraper.py
 running news scraper =  python src/news_scraper.py --mode history --start 2026-01-01 --end 2026-04-07
-running llama_scraper = python src/llama_scraper.py --mode history --start 2026-03-01 --end 2026-04-13
+running llama_scraper = python src/llama_scraper.py --mode history --start 2026-03-01 --end 2026-04-16
 reset process = python src/scraper.py --reset
 
         {
@@ -42,6 +42,11 @@ reset process = python src/scraper.py --reset
 
         git push origin main
 
+vvv
+
+git add .
+git commit -m "Notes"
+git push origin main
 
 ### B. Penanganan Kondisi Khusus (Troubleshooting)
 
@@ -53,6 +58,13 @@ Jika sempat mengalami kendala "rejected" dan file bocor:
         git pull origin main --rebase
 
         git push origin main
+
+vvv
+git add .
+git commit -m "Notes"
+git pull origin main --rebase
+git push origin main
+
 
 2) Jika Ingin Memaksa (Force Push)
     # Gunakan ini hanya jika yakin data di komputer adalah yang paling benar dan ingin menghapus sampah yang ada di GitHub:

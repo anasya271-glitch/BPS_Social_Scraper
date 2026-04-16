@@ -78,14 +78,12 @@ class BPS_Absolute_Sentinel:
                     r"\bcibaduyut\b", r"\bpasar[\s\-]?baru\b", r"\bsuci\b", r"\bcigondewah\b", r"\bbinong\b"
                 ],
                 "BLACKLIST": [
-                    # Kabupaten/Kota Tetangga Jabar
                     r"\bkabupaten[\s\-]?bandung\b", r"\bbupati\b", r"\bsoreang\b", r"\bkbb\b", 
                     r"\bbandung[\s\-]?barat\b", r"\blembang\b", r"\bcimahi\b", r"\bmajalaya\b", 
                     r"\bpangalengan\b", r"\bciwidey\b", r"\bpadalarang\b", r"\bpemkab\b",
                     r"\bbekasi\b", r"\bbogor\b", r"\bdepok\b", r"\bkarawang\b", r"\bpurwakarta\b",
                     r"\bsukabumi\b", r"\bciamis\b", r"\btasikmalaya\b", r"\bgarut\b", r"\bcirebon\b",
                     r"\bcianjur\b", r"\bindramayu\b", r"\bmajalengka\b", r"\bsumedang\b", r"\bsubang\b", r"\bkuningan\b",
-                    # Provinsi & Ibukota Lain
                     r"\bjakarta\b", r"\bdki jakarta\b", r"\bjawa tengah\b", r"\bjateng\b", r"\bsemarang\b",
                     r"\bjawa timur\b", r"\bjatim\b", r"\bsurabaya\b", r"\bmalang\b", r"\bbanten\b", r"\btangerang\b",
                     r"\byogyakarta\b", r"\bdiy\b", r"\bjogja\b", r"\bbali\b", r"\bdenpasar\b",
@@ -117,16 +115,13 @@ class BPS_Absolute_Sentinel:
                 r"\bsepatu\b", r"\btekstil\b", r"\bsemen\b", r"\belpiji\b", r"\bbbm\b", r"\bkopi\b", r"\bkakao\b", r"\bkosmetik\b"
             ],
             "NOISE_WORDS": [
-                # Kriminal, Olahraga & Bencana
                 r"\bpiala\b", r"\bliga\b", r"\bgempa\b", r"\bkecelakaan\b", r"\bpembunuhan\b", r"\bpersib\b", 
                 r"\bskandal\b", r"\bpilkada\b", r"\bkampanye\b", r"\bcapres\b", r"\bcawalkot\b", r"\bpartai\b",
                 r"\bhakim\b", r"\bperadilan\b", r"\bnarkoba\b", r"\btiket\b", r"\bkonser\b", r"\bsurat[\s\-]?suara\b",
                 r"\bwisatawan\b", r"\bkuliner\b", r"\bbpbd\b", r"\bbencana\b", r"\bcuaca ekstrem\b", 
                 r"\bpohon tumbang\b", r"\bhujan deras\b", r"\bkpu\b", r"\bbawaslu\b", r"\blogistik pemilu\b", 
                 r"\bbunuh diri\b", r"\bpengeroyokan\b",
-                # Loker & CPNS
                 r"\bcpns\b", r"\blowongan\b", r"\bloker\b", r"\brekrutmen\b",
-                # Akademis & Edukasi
                 r"\bkampus\b", r"\buniversitas\b", r"\binstitut\b", r"\bpoliteknik\b", r"\bakademi\b", r"\bsekolah tinggi\b",
                 r"\buin\b", r"\bitb\b", r"\bunpas\b", r"\bunpad\b", r"\bupi\b", r"\btelkom university\b", r"\bunpar\b", r"\bunisba\b",
                 r"\bmahasiswa\b", r"\bdosen\b", r"\bguru besar\b", r"\brektor\b", r"\bdekan\b", 
@@ -134,7 +129,6 @@ class BPS_Absolute_Sentinel:
                 r"\bseminar\b", r"\bwebinar\b", r"\bsimposium\b", r"\blokakarya\b", r"\bkonferensi\b", 
                 r"\bsidang terbuka\b", r"\bskripsi\b", r"\btesis\b", r"\bdisertasi\b", r"\bsman\b", r"\bsmpn\b", 
                 r"\bpramuka\b", r"\bjambore\b",
-                # [NEW] Birokrasi Internal & Aturan ASN
                 r"\bmobil dinas\b", r"\bkendaraan dinas\b", r"\baparatur sipil negara\b", r"\basn\b", r"\bwfh\b", 
                 r"\bapel pagi\b", r"\bmutasi jabatan\b", r"\brotasi jabatan\b", r"\bdisiplin pegawai\b", r"\bkinerja asn\b"
             ],
@@ -336,7 +330,6 @@ class BPS_Absolute_Sentinel:
         truncated_text = self.smart_truncate(article_text)
         task_log.append("     [>] Mengirim Smart Context Window ke Hakim SLM (Ollama)...")
         
-        # [NEW] Absolute Rejection Prompt
         custom_prompt = f"""
         Lakukan audit investigatif pada teks berita berikut untuk kebutuhan Badan Pusat Statistik (BPS).
         Keluarkan format JSON MURNI dengan keys: "status_geografi", "entitas_ditemukan", "indikator_perdagangan", "anomali_atau_hidden_agenda", "skor_relevansi_bps".
