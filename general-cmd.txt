@@ -6,10 +6,10 @@ running llama_scraper = python src/llama_scraper.py --mode history --start 2026-
 reset process = python src/scraper.py --reset
 
         {
-            "username": "partaiburuh_kotabandung",
-            "category": "Partai Politik",
-            "priority": "high",
-            "expected_activities": ["kampanye_fundraising", "realisasi_pengeluaran", "laporan_institusional"]
+            "username": "username_instagram",
+            "category": "Jenis Lembaga/Asosiasi",
+            "priority": "low/medium/high",
+            "expected_activities": ["kampanye_fundraising", "realisasi_pengeluaran", "laporan_institusional"] << contoh, konteks bisa dilihat di instagram_scraper.py
         },
 
         self.sites = [
