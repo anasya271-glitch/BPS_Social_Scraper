@@ -22,7 +22,7 @@ warnings.filterwarnings("ignore")
 
 class BPS_Absolute_Sentinel:
     """
-    Surgical Debugger V65 | The Absolute Sentinel
+    BMEIS (Bandung Municapality's Export and Import Phenomenon Scraper | v.65
     Modul aktif: Isolated Log Buffer, Aggressive Lexical Filter, Absolute SLM Prompt, Deterministic Caching.
     """
     def __init__(self, args):
@@ -328,7 +328,7 @@ class BPS_Absolute_Sentinel:
 
     async def interrogate_with_llama(self, article_text, task_log):
         truncated_text = self.smart_truncate(article_text)
-        task_log.append("     [>] Mengirim Smart Context Window ke Hakim SLM (Ollama)...")
+        task_log.append("     [>] Mengirim Smart Context Window ke SLM (Ollama)...")
         
         custom_prompt = f"""
         Lakukan audit investigatif pada teks berita berikut untuk kebutuhan Badan Pusat Statistik (BPS).
@@ -521,7 +521,7 @@ class BPS_Absolute_Sentinel:
             sys.exit(1)
 
         print("\n" + "="*75)
-        print(" SURGICAL DEBUGGER V65 | THE ABSOLUTE SENTINEL")
+        print(" BMEIS (Bandung Municapality's Export and Import Phenomenon Scraper | v.65) ")
         if self.args.start or self.args.end:
             print(f" Rentang Waktu: {self.args.start} hingga {self.args.end}")
         print("="*75)
@@ -548,7 +548,7 @@ class BPS_Absolute_Sentinel:
         print(f"[RADAR] Menemukan {len(all_entries)} target potensial ({cached_count} sudah diaudit sebelumnya, {len(new_targets)} target baru).")
         
         if not new_targets:
-            print("[✓] Semua target hari ini sudah diekstraksi. Menutup sistem dengan anggun.")
+            print("[✓] Semua target hari ini sudah diekstraksi. Menutup sistem dengan senyap.")
             sys.exit(0)
             
         print("[RADAR] Memulai pembedahan asinkron untuk target baru...\n")
