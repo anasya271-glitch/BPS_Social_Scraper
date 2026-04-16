@@ -3,7 +3,6 @@ import pandas as pd
 import logging
 import os
 
-# Konfigurasi Logging untuk Traceability
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(levelname)s - %(message)s',
@@ -44,8 +43,6 @@ class InvestigativeDataExtractor:
 
         logging.info(f"Proses selesai. Data disimpan di {self.output_file}")
 
-# Eksekusi Mode Debugging (5 Emiten)
 if __name__ == "__main__":
-    # Pastikan folder 'laporan_tahunan' berisi 5 PDF emiten (SSTM, ULTJ, ZATA, BELL, ALDO)
     extractor = InvestigativeDataExtractor("laporan_tahunan", "Hasil_Ekstraksi_Bandung.xlsx")
     extractor.process_reports()

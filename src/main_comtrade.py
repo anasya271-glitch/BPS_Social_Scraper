@@ -6,7 +6,6 @@ from datetime import datetime
 from pathlib import Path
 from dotenv import load_dotenv
 
-# Memuat variabel lingkungan (Environment Variables) secara senyap
 load_dotenv()
 
 class BPSComtradeMacroEngine:
@@ -15,16 +14,13 @@ class BPSComtradeMacroEngine:
     Fokus: Pakaian Jadi (HS 61 & 62), Data Bulanan, Staggered Fetching Protocol.
     """
     def __init__(self):
-        # Mengambil kunci dari brankas .env
         self.api_key = os.getenv("COMTRADE_API_KEY")
         
-        # Endpoint API V1 PBB: C (Commodities) / M (Monthly) / HS (Harmonized System)
         self.base_url = "https://comtradeapi.un.org/data/v1/get/C/M/HS"
         
         self.export_dir = Path.cwd() / "data" / "exports"
         os.makedirs(self.export_dir, exist_ok=True)
         
-        # Parameter BPS (Fokus Pakaian Jadi)
         self.reporter_code = "360" # Indonesia
         self.partner_code = "0"    # World (Seluruh Dunia)
         self.flow_codes = "M,X"    # Import (M) & Export (X)
@@ -45,7 +41,6 @@ class BPSComtradeMacroEngine:
             try:
                 response = requests.get(url, headers=headers, timeout=30)
                 
-                # 200: Sukses | 429: Terlalu banyak permintaan
                 if response.status_code == 200:
                     return response.json()
                 elif response.status_code == 429:
@@ -73,8 +68,7 @@ class BPSComtradeMacroEngine:
         }
 
         print("\n[MENGINISIASI KONEKSI KE PELADEN UN COMTRADE...]")
-        
-        # Staggered Fetching: Iterasi per tahun untuk mencegah Overload API
+
         for year in range(start_year, end_year + 1):
             periods = self._generate_monthly_periods(year)
             print(f"  [>] Mengekstrak Laporan Kepabeanan Tahun {year}...")
@@ -110,7 +104,6 @@ class BPSComtradeMacroEngine:
             else:
                 print(f"      [!] Gagal memvalidasi muatan data untuk tahun {year}.")
                 
-            # Jeda sopan santun untuk menghormati API PBB
             time.sleep(2)
             
         return True
@@ -124,11 +117,9 @@ class BPSComtradeMacroEngine:
         
         df = pd.DataFrame(self.macro_data)
         
-        # Konversi tipe data agar Excel bisa menjumlahkan angkanya
         df["Berat Bersih (Kg)"] = pd.to_numeric(df["Berat Bersih (Kg)"], errors='coerce')
         df["Nilai Transaksi (USD)"] = pd.to_numeric(df["Nilai Transaksi (USD)"], errors='coerce')
         
-        # Penataan Rectangularization via XlsxWriter
         writer = pd.ExcelWriter(filename, engine='xlsxwriter')
         df.to_excel(writer, index=False, sheet_name='Data Makro UN')
         
@@ -139,13 +130,12 @@ class BPSComtradeMacroEngine:
         num_format = workbook.add_format({'num_format': '#,##0'})
         usd_format = workbook.add_format({'num_format': '$#,##0.00'})
         
-        # Menerapkan format visual
         for col_num, value in enumerate(df.columns.values):
             worksheet.write(0, col_num, value, header_format)
             worksheet.set_column(col_num, col_num, 20)
             
-        worksheet.set_column('E:E', 20, num_format) # Kolom Berat
-        worksheet.set_column('F:F', 20, usd_format) # Kolom USD
+        worksheet.set_column('E:E', 20, num_format)
+        worksheet.set_column('F:F', 20, usd_format)
             
         writer.close()
         
@@ -165,7 +155,6 @@ class BPSComtradeMacroEngine:
         print(" Target: Pakaian Jadi (HS 61 & 62) | Arus: Ekspor & Impor")
         print("="*75)
         
-        # Kita tarik 5 tahun terakhir: 2019 hingga 2023 (2024 mungkin belum lengkap)
         success = self.collect_historical_data(2019, 2023)
         
         if success:

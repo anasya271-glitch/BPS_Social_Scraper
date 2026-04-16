@@ -20,14 +20,12 @@ class TradePhenomenonExtractor:
         self.df = pd.read_csv(input_file) if input_file.endswith('.csv') else pd.read_excel(input_file)
         self.output_file = output_file
         
-        # Kamus Leksikal Intelijen Geografis (G20, ASEAN, Target Pasar Utama)
         self.target_markets = [
             'usa', 'america', 'united states', 'europe', 'japan', 'china', 
             'korea', 'middle east', 'australia', 'singapore', 'malaysia', 
             'germany', 'uk', 'united kingdom', 'africa', 'asia', 'global'
         ]
         
-        # Kamus Metrik Kapasitas
         self.capacity_metrics = [r'\b\d+\s*tons\b', r'\b\d+\s*teu\b', r'\b\d+\s*containers\b', r'capacity\s*of\s*\d+']
 
     def extract_phenomenon(self, url):
@@ -41,23 +39,19 @@ class TradePhenomenonExtractor:
             
             if response.status_code == 200:
                 soup = BeautifulSoup(response.text, 'html.parser')
-                # Fokus pada tag paragraf dan list untuk menghindari noise dari navigasi web
                 text_blocks = soup.find_all(['p', 'li', 'span', 'div'])
                 clean_text = " ".join([block.get_text(separator=' ', strip=True).lower() for block in text_blocks])
                 
-                # 1. Ekstraksi Rute Geografis
                 found_markets = set()
                 for market in self.target_markets:
                     if re.search(r'\b' + market + r'\b', clean_text):
                         found_markets.add(market.title())
                 
-                # 2. Ekstraksi Kapasitas/Volume
                 found_capacities = set()
                 for pattern in self.capacity_metrics:
                     matches = re.findall(pattern, clean_text)
                     found_capacities.update(matches)
 
-                # Formulasi Output Fenomena
                 rute_ekspor = ", ".join(found_markets) if found_markets else "TIDAK ADA KLAIM PASAR"
                 metrik_skala = ", ".join(found_capacities) if found_capacities else "TIDAK ADA METRIK"
                 
@@ -70,7 +64,6 @@ class TradePhenomenonExtractor:
     def execute_extraction(self):
         logging.info("Memulai Ekstraksi Fenomena Perdagangan...")
         
-        # Inisialisasi kolom baru
         self.df['Klaim_Rute_Pasar'] = ""
         self.df['Klaim_Kapasitas_Web'] = ""
         self.df['Indikator_Asimetri'] = ""
@@ -88,24 +81,21 @@ class TradePhenomenonExtractor:
             self.df.at[index, 'Klaim_Rute_Pasar'] = rute
             self.df.at[index, 'Klaim_Kapasitas_Web'] = kapasitas
             
-            # Analisis Diskursus Kritis (CDA) Otomatis
             asimetri = "SEJALAN"
             if kategori_bps == "IMPOR" and rute not in ["TIDAK ADA KLAIM PASAR", "KONEKSI GAGAL", "-", "HTTP 403", "HTTP 404"]:
-                # Jika BPS mencatat mereka Importir, tapi web mereka mengklaim ekspor ke negara lain
                 asimetri = "ANOMALI: IMPORTIR MENGKLAIM EKSPOR/RE-EKSPOR"
             elif kategori_bps == "EKSPOR" and rute == "TIDAK ADA KLAIM PASAR":
                 asimetri = "UNDER-REPORTING DIGITAL / BROKER POTENTIAL"
                 
             self.df.at[index, 'Indikator_Asimetri'] = asimetri
             
-            time.sleep(1) # Jeda untuk etika scraping
+            time.sleep(1)
 
         self.df.to_excel(self.output_file, index=False)
         logging.info(f"Ekskavasi Selesai. Laporan Fenomena disimpan di: {self.output_file}")
         os.startfile(os.path.abspath(self.output_file))
 
 if __name__ == "__main__":
-    # Gunakan file hasil dorking Anda sebagai input
     FILE_INPUT = "Hasil_Automated_Dorking_BPS.xlsx"
     FILE_OUTPUT = "Laporan_Fenomena_Perdagangan_Bandung.xlsx"
     

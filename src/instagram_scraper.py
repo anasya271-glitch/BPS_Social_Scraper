@@ -17,7 +17,6 @@ import openpyxl
 from playwright.sync_api import TimeoutError as PlaywrightTimeoutError
 import torch
 
-# THE SILENCER: Mengurangi noise terminal
 warnings.filterwarnings("ignore", category=UserWarning, module="torch.utils.data.dataloader")
 
 class BPSMultimodalScraper:
@@ -53,9 +52,6 @@ class BPSMultimodalScraper:
                     
         print("[SYSTEM] Neural Engine Siap.")
 
-        # =====================================================================
-        # EXPANDED TAXONOMY: Pemetaan Sosiolinguistik Politik & Filantropi
-        # =====================================================================
         self.keywords = {
             "realisasi_pengeluaran_sosial": [
                 r"\btersalurkan\b", r"\brealisasi\b", r"\bdistribusi\b", r"\bpenyaluran\b", 
@@ -85,10 +81,10 @@ class BPSMultimodalScraper:
             "simpati_dan_duka_cita": [
                 r"\bturut[- ]?berduka[- ]?cita\b", r"\bberpulangnya[- ]?ke[- ]?rahmatullah\b", r"\bwafatnya\b",
                 r"\bamal[- ]?ibadahnya[- ]?diterima\b", r"\bkeluarga[- ]?yang[- ]?ditinggalkan\b", r"\bketabahan\b",
-                r"\bhusnul[- ]?kh[oa]timah\b" # Mengcover husnul khotimah, husnulkhatimah, husnul-khotimah
+                r"\bhusnul[- ]?kh[oa]timah\b"
             ],
             "kegiatan_reuni_dan_event": [
-                r"\breuni[- ]?akbar\b", r"\btemu[- ]?kangen\b", r"\bhalal[- ]?bihalal\b", # Mengcover halal bihalal, halalbihalal, halal-bihalal
+                r"\breuni[- ]?akbar\b", r"\btemu[- ]?kangen\b", r"\bhalal[- ]?bihalal\b",
                 r"\bmubes\b", r"\bmusyawarah[- ]?besar\b", r"\btiket[- ]?masuk\b", 
                 r"\bkongres\b", r"\bgathering[- ]?alumni\b", r"\bjalan[- ]?sehat\b",
                 r"\bturnamen[- ]?golf\b", r"\bcharity[- ]?golf\b"
@@ -103,7 +99,6 @@ class BPSMultimodalScraper:
                 r"\bkaos[- ]?alumni\b", r"\bjaket[- ]?alumni\b", r"\bsouvenir\b", r"\bharga[- ]?spesial\b"
             ]
         }
-        # =====================================================================
 
     def _initialize_config(self, path):
         if not os.path.exists(path):
@@ -121,7 +116,6 @@ class BPSMultimodalScraper:
                 for file in files:
                     if file.endswith(('.jpg', '.png', '.jpeg')):
                         filepath = os.path.join(root, file)
-                        # Hitung umur file dalam hitungan hari
                         file_age_days = (now - os.path.getmtime(filepath)) / (24 * 3600)
                         
                         if file_age_days > days_old:
@@ -174,30 +168,21 @@ class BPSMultimodalScraper:
         if not text or text == "OCR_FAILED": 
             return 0
         
-        # 1. PRE-PROCESSING
         text_clean = str(text).lower()
         text_clean = re.sub(r'(?<=\d)[sS](?=[.,\d]|$)|(?<=^[.,\d])[sS](?=\d)', '5', text_clean)
         text_clean = re.sub(r'(?<=\d)[bB](?=[.,\d]|$)|(?<=^[.,\d])[bB](?=\d)', '8', text_clean)
         text_clean = re.sub(r'(?<=\d)[oO]+|[oO]+(?=\d)', '0', text_clean)
-        # Bersihkan noise pemisah (misal: ,= atau -,)
         text_clean = text_clean.replace(',=', '').replace('-,', '.')
         
         nominals = []
 
-        # 2. EKSTRAKSI FORMAT RUPIAH (Prefix Diperketat, Angka Diperlonggar)
-        # Menghapus huruf tunggal 'r' dan 'p'. 
-        # [.\-\s]* memungkinkan penangkapan typo seperti "Pp-25000" atau "Rp. 25000"
         pola_rp = r'\b(?:rp|pp|bp|idr)[.\-\s]*([\d]+(?:[.,]\d+)*)'
         for match in re.findall(pola_rp, text_clean):
-            # Hilangkan semua titik dan koma untuk mendapatkan nilai pure integer
             clean_num = re.sub(r'\D', '', match)
             if clean_num.isdigit():
-                # Filter 1: Jika diawali '0' dan panjang > 8, itu pasti Nomor HP, bukan uang
                 if not (clean_num.startswith('0') and len(clean_num) > 8):
                     nominals.append(int(clean_num))
 
-        # 3. EKSTRAKSI FORMAT NARATIF
-        # m dan t sudah dihapus sesuai intuisi analitik Anda yang sangat tepat
         pola_naratif = r'([0-9]+(?:[.,][0-9]+)?)\s?(ribu|rb|juta|jt|miliar|milyar|triliun)\b'
         for angka, skala in re.findall(pola_naratif, text_clean):
             try:
@@ -213,8 +198,6 @@ class BPSMultimodalScraper:
             except: 
                 continue
 
-        # 4. SANITY CHECK (Batas Akal Sehat)
-        # Filter 2: Membuang angka di atas 10 Triliun (untuk mengeleminasi nomor rekening 12-15 digit yang bocor)
         valid_nominals = [n for n in nominals if n < 10000000000000]
 
         return max(valid_nominals) if valid_nominals else 0
@@ -368,13 +351,12 @@ class BPSMultimodalScraper:
                             page.wait_for_selector("main", timeout=15000)
                         except PlaywrightTimeoutError:
                             print(f"\n[!] Gagal memuat profil @{username}.")
-                            # Cek apakah dilempar ke halaman login
                             if page.query_selector("input[name='username']"):
                                 print("[CRITICAL] Sesi Cookies Habis! Harap perbarui file 'auth_state.json'.")
-                                sys.exit(1) # Hentikan skrip karena percuma dilanjut
+                                sys.exit(1)
                             else:
                                 print("[WARNING] Elemen 'main' tidak ditemukan. Mungkin terkena Soft-Ban atau koneksi lambat. Melewati akun ini...")
-                                continue # Lanjut ke akun berikutnya
+                                continue
 
                         scripts_text = page.evaluate('''() => {
                             return Array.from(document.querySelectorAll('script[type="application/json"], script[type="application/json+protobuf"]'))
@@ -401,7 +383,6 @@ class BPSMultimodalScraper:
                             ocr_txt, img_p = self.perform_ocr(data['src'], post_id, username, entity_path)
                             combined = f"CAPTION: {native_caption} | OCR: {ocr_txt}"
                             
-                            # LOGIKA BARU: Tidak ada lagi fitur Consistency_Score
                             entity_results.append({
                                 "Institution": username,
                                 "Detected_Phenomena": self.auto_flagger(combined),

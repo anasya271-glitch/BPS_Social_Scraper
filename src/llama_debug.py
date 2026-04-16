@@ -23,18 +23,16 @@ class BPS_HAR_Debugger:
         print("="*60)
         
         async with async_playwright() as p:
-            # 1. Menghidupkan perekam HAR (record_har_path) dan kembali ke metode natural V31
             context = await p.chromium.launch_persistent_context(
                 user_data_dir=str(self.workspace_dir), 
                 channel="msedge", 
                 headless=False,
                 args=["--disable-blink-features=AutomationControlled"],
-                record_har_path="BPS_Debug_Network.har" # File HAR akan tersimpan di sini
+                record_har_path="BPS_Debug_Network.har"
             )
             
             page = await context.new_page()
             
-            # [UJI COBA 1] NARASI.TV
             print("\n[1] Mengakses narasi.tv secara langsung (Bypass RSS)...")
             try:
                 await page.goto("https://narasi.tv", wait_until="domcontentloaded", timeout=30000)
@@ -43,7 +41,6 @@ class BPS_HAR_Debugger:
             except Exception as e:
                 print(f"    Gagal memuat narasi.tv: {e}")
 
-            # [UJI COBA 2] PIKIRAN RAKYAT (Cloudflare Test)
             print("\n[2] Menguji Cloudflare pada kabarbandung.pikiran-rakyat.com...")
             test_url = "https://kabarbandung.pikiran-rakyat.com/kabar-bandung/pr-41110131803/viral-di-tiktok-rshs-klarifikasi-kasus-bayi-diserahkan-ke-orang-lain"
             try:
@@ -54,7 +51,6 @@ class BPS_HAR_Debugger:
             except Exception as e:
                 print(f"    Gagal memuat Pikiran Rakyat: {e}")
 
-            # Menutup browser dan menyimpan rekaman HAR
             await context.close()
             print("\n[v] Selesai. File HAR telah berhasil disimpan sebagai 'BPS_Debug_Network.har' di folder Anda.")
 

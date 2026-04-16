@@ -61,7 +61,7 @@ Jika sempat mengalami kendala "rejected" dan file bocor:
 
 vvv
 git add .
-git commit -m "Notes"
+git commit -m "Efisiensi kode mesin-mesin inti"
 git pull origin main --rebase
 git push origin main
 

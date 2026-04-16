@@ -33,7 +33,6 @@ class BPSNewsMiner:
             "jabarekspres.com", "jabar.tribunnews.com"
         ]
         
-        # TAKSONOMI KATA KUNCI: REKALIBRASI EKSPOR-IMPOR & GEOGRAFI
         self.config = {
             "GEOGRAPHY": {
                 "STRICT_ANCHORS": [r"\bkota[\s\-]?bandung\b", r"\bpemkot[\s\-]?bandung\b", r"\bwali[\s\-]?kota[\s\-]?bandung\b"],
@@ -111,29 +110,25 @@ class BPSNewsMiner:
         matches = {"Geo": [], "Flux": [], "Commodity": []}
         has_strict_geo = False
 
-        # 1. Geographic Layering (Intelligent Anchor)
         for anchor in self.config["GEOGRAPHY"]["STRICT_ANCHORS"] + self.config["GEOGRAPHY"]["DISTRICTS"]:
             finds = re.findall(anchor, content)
             if finds:
-                score += (15 * len(finds)) # Bobot sangat tinggi untuk eksplisit Kota Bandung
+                score += (15 * len(finds))
                 matches["Geo"].append(anchor.replace(r"[\s\-]?", " ").replace(r"\b", ""))
                 has_strict_geo = True
                 
-        # Deteksi Broad Anchor (Kata "Bandung" saja)
         broad_finds = re.findall(self.config["GEOGRAPHY"]["BROAD_ANCHOR"][0], content)
         if broad_finds:
-            score += (5 * len(broad_finds)) # Bobot rendah untuk menghindari bias Kabupaten
+            score += (5 * len(broad_finds))
 
-        # Negative Filter Tolerance: Blacklist hanya berlaku jika tidak ada Strict Geo
         has_blacklist = any(re.search(b, content) for b in self.config["GEOGRAPHY"]["BLACKLIST"])
         if has_blacklist and not has_strict_geo:
             return -100, matches, "Ditolak (Bias Kabupaten/Regional Lain)"
 
-        # 2. Trade Flux Dimension (Nasional vs Internasional)
         for flux in self.config["TRADE_FLUX"]["INTERNASIONAL"]:
             finds = re.findall(flux, content)
             if finds:
-                score += (20 * len(finds)) # Bobot tertinggi untuk perdagangan luar negeri
+                score += (20 * len(finds))
                 matches["Flux"].append(flux.replace(r"[\s\-]?", " ").replace(r"\b", ""))
                 
         for flux in self.config["TRADE_FLUX"]["ANTAR_DAERAH"] + self.config["TRADE_FLUX"]["INDICATORS"]:
@@ -142,14 +137,12 @@ class BPSNewsMiner:
                 score += (10 * len(finds))
                 matches["Flux"].append(flux.replace(r"[\s\-]?", " ").replace(r"\b", ""))
 
-        # 3. Commodity Recognition
         for item in self.config["COMMODITIES"]:
             finds = re.findall(item, content)
             if finds:
                 score += (5 * len(finds))
                 matches["Commodity"].append(item.replace(r"[\s\-]?", " ").replace(r"\b", ""))
 
-        # Executive Decision Engine
         if score >= 40 and matches["Flux"] and matches["Commodity"]:
             status = "Prioritas Tinggi (Validasi Ekspor/Impor BPS)"
         elif score >= 15 and (matches["Flux"] or matches["Commodity"]):
