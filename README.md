@@ -2,23 +2,53 @@
 
 -----
 
-#  ***Bandung Municipality's Phenomenon Scraper***
+# ***Bandung Municipality's Phenomenon Scraper***
 
-![Python](https://img.shields.io/badge/Python-3.11+-blue?style=for-the-badge&logo=python&logoColor=white)
-![Ollama](https://img.shields.io/badge/AI-Ollama%20Local-orange?style=for-the-badge&logo=ollama&logoColor=white)
-![License](https://img.shields.io/badge/License-MIT-green?style=for-the-badge)
+<link rel="stylesheet" href="https://cloudflare.com">
+
+<a href="https://linkedin.com" target="_blank">
+    <i class="fab fa-linkedin" style="font-size:30px; color:#0077B5;"></i>
+</a>
+
+![Python](https://img.shields.io/badge/Python-3.11+-blue?style=flate&logo=python&logoColor=white)
+![Ollama](https://img.shields.io/badge/AI-Ollama%20Local-orange?style=flat&logo=ollama&logoColor=white)
+![License](https://img.shields.io/badge/License-MIT-green?style=flat)
 <br>
-[![LinkedIn](https://img.shields.io/badge/LinkedIn-Connect-blue?style=flat-square&logo=linkedin)](https://www.linkedin.com/in/anasyanf)
-[![My Instagram](https://img.shields.io/badge/Instagram-Follow-E4405F?style=flat-square&logo=instagram)](https://www.instagram.com/chiyeonas)
-[![BPS Kota Bandung's Instagram](https://img.shields.io/badge/Instagram-Follow-E4405F?style=flat-square&logo=instagram)](https://www.instagram.com/bps_kota_bandung)
+![Build Status](https://img.shields.io/badge/Status-Active%20Investigation-success?style=flat)
+![Data Source](https://img.shields.io/badge/Source-Public%20Domain-blue?style=flat)
+[![LinkedIn](https://img.shields.io/badge/LinkedIn-Connect-blue?style=flat&logo=LinkedIn&logoColor=white)](https://www.linkedin.com/in/anasyanf) 
+[![My Instagram](https://img.shields.io/badge/Instagram-Follow-E4405F?label=%40chiyeonas&style=flat&logo=instagram)](https://www.instagram.com/chiyeonas)
+[![BPS Kota Bandung's Instagram](https://img.shields.io/badge/Instagram-Follow-E4405F?label=%40bps_kota_bandung&style=flat&logo=instagram)](https://www.instagram.com/bps_kota_bandung)
+
 
 **Bandung Municipality's Phenomenon Scraper** adalah ekosistem instrumen intelijen data terpadu yang dirancang untuk Badan Pusat Statistik (BPS). Alat ini bertujuan untuk mendeteksi, mengekstraksi, dan melakukan audit otomatis terhadap fenomena ekonomi; khususnya Ekspor, Impor, Logistik, dan Lembaga Non-Profit di wilayah Kota Bandung.
 
 Sistem ini menggabungkan kekuatan **Asynchronous Web Scraping** dengan **Local Small Language Model (SLM)** untuk menjamin kedaulatan data dan akurasi analisis tanpa biaya API pihak ketiga.
 
+<details>
+<summary><b><i><u><span style="color:blue">Daftar Isi</span></u></i></b></summary>
+
+- [Misi Proyek](#misi-proyek)
+- [Alur Kerja Sistem](#alur-kerja-sistem)
+  - [Ketajaman Metodologi](#ketajaman-metodologi)
+- [Development Roadmap](#development-roadmap)
+- [Katalog Instrumen Terpadu](#katalog-instrumen-terpadu)
+- [Prasyarat Sistem](#prasyarat-sistem)
+  - [Spesifikasi Rekomendasi Perangkat Keras atau Hardware](#spesifikasi-rekomendasi-perangkat-keras-atau-hardware)
+  - [Spesifikasi Perangkat Lunak atau Software](#spesifikasi-perangkat-lunak-atau-software)
+- [Panduan Instalasi](#panduan-instalasi)
+  - [Isolasi Lingkungan atau Virtual Environment](#isolasi-lingkungan-atau-virtual-environment)
+  - [Instalasi Pustaka Inti](#instalasi-pustaka-inti)
+  - [Konfigurasi Browser dan AI](#konfigurasi-browser-dan-AI)
+- [Cara Penggunaan dan Eksekusi](#cara-penggunaan-dan-eksekusi)
+- [Output dan Laporan](#output-dan-laporan)
+- [Catatan Keamanan & Etika](#catatan-keamanan-dan-etika)
+- [Lisensi](#lisensi)
+</details>
+
 -----
 
-##  Misi Proyek
+## Misi Proyek
 
 Membangun infrastruktur data yang mampu menjembatani celah antara rilis berita publik dengan realita administratif lapangan, guna meminimalisir asimetri informasi dalam pelaporan statistik kewilayahan. Dengan kata lain, proyek ini dibangun untuk mengatasi asimetri informasi dengan cara:
 1. Mendeteksi anomali harga komoditas impor di tingkat pasar lokal.
@@ -48,11 +78,42 @@ Membangun infrastruktur data yang mampu menjembatani celah antara rilis berita p
 
 ```mermaid
 graph LR
-  A[Data Publik] --> B{Mesin Scraper}
-  B --> C[Environment Local]
-  C --> D[Analisis oleh Ollama AI]
-  D --> E[Excel Terstruktur]
-  E --> F[Rekomendasi Kebijakan]
+  subgraph Sources [Pengumpulan Data 🌐 ]
+    A[Situs Publik & Media Sosial]
+  end
+
+  subgraph Engine [Ekstraksi Data ⚙️ ]
+    B{Mesin Playwright}
+    B --> B1[Pengalih Agen Pengguna]
+  end
+
+  subgraph Processing [Zona Aman Lokal 🛡️ ]
+    C[Deduplikasi]
+    C --> D[Analisis Ollama AI]
+  end
+
+  subgraph Output [Hasil Akhir 📊 ]
+    E[Excel Terstruktur]
+    F[Catatan Audit]
+  end
+
+  Sources --> B
+  B1 --> C
+  D --> E
+  D --> F
+
+  style A fill:#bbdefb,stroke:#1565c0,stroke-width:2px,color:#000
+  style B fill:#ffe0b2,stroke:#ef6c00,stroke-width:2px,color:#000
+  style B1 fill:#fff9c4,stroke:#fbc02d,stroke-width:2px,color:#000
+  style C fill:#c8e6c9,stroke:#2e7d32,stroke-width:2px,color:#000
+  style D fill:#e1bee7,stroke:#6a1b9a,stroke-width:2px,color:#000
+  style E fill:#b2ebf2,stroke:#00838f,stroke-width:2px,color:#000
+  style F fill:#cfd8dc,stroke:#455a64,stroke-width:2px,color:#000
+
+  style Sources fill:none,stroke:#1565c0,stroke-dasharray: 5 5
+  style Engine fill:none,stroke:#ef6c00,stroke-dasharray: 5 5
+  style Processing fill:none,stroke:#2e7d32,stroke-dasharray: 5 5
+  style Output fill:none,stroke:#00838f,stroke-dasharray: 5 5
 ```
 
 ### Ketajaman Metodologi
@@ -75,7 +136,7 @@ Proyek ini akan terus berkembang:
 ----
 
 
-##  Katalog Instrumen Terpadu (Bandung Sentinel Ecosystem)
+##  Katalog Instrumen Terpadu
 
 | Kategori | Nama Alat | Deskripsi Fungsi | Tujuan Utama |
 | :--- | :--- | :--- | :--- |
@@ -181,7 +242,7 @@ python src/instagram_scraper.py --target nama_akun_asosiasi
 
 -----
 
-##  Output & Laporan
+##  Output dan Laporan
 
 #### 📂 `data/exports/`
 
@@ -210,13 +271,19 @@ python src/instagram_scraper.py --target nama_akun_asosiasi
 
 -----
 
-##  Catatan Keamanan & Etika
+##  Catatan Keamanan dan Etika
 
 > [!IMPORTANT]
 >  * Seluruh pemrosesan Small Language Model (SLM) dan ekstraksi informasi dilakukan secara lokal di perangkat. Tidak ada data mentah maupun hasil analisis investigasi yang ditransmisikan ke server pihak ketiga di luar yurisdiksi nasional, menjamin kerahasiaan penuh sesuai standar keamanan informasi BPS.
 >  * Skrip ini mengadopsi teknik User-Agent emulation dan sinkronisasi profil autentik untuk memitigasi risiko deteksi otomatis. Pendekatan ini memastikan interaksi dengan infrastruktur web target tetap berada dalam koridor perilaku manusia yang wajar (*human-like behavior*).
 >  * Implementasi kontrol konkurensi asinkron dibatasi secara ketat (maksimal dua instansi aktif) untuk menghormati kapasitas server target. Hal ini merupakan bentuk kepatuhan terhadap etika pengumpulan data publik guna mencegah degradasi performa pada sistem penyedia data serta menghindari pemblokiran IP oleh server.
 >  * Penggunaan perangkat lunak ini ditujukan eksklusif untuk mendukung transparansi dan akuntabilitas sektor publik. Skrip ini tidak dirancang untuk menembus sistem keamanan yang diproteksi, melainkan untuk mengoptimalkan pengawasan data yang tersedia secara publik bagi kepentingan audit negara.
+
+-----
+
+## Lisensi
+
+*Bandung Municipality's Phenomenon Scraper* dirilis dengan [MIT license](LICENSE).
 
 -----
 
