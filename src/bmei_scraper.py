@@ -20,23 +20,30 @@ import warnings
 
 warnings.filterwarnings("ignore")
 
-class BPS_LNPRT_Sentinel:
+class BPS_BMEI_Sentinel:
     """
-    Surgical Debugger V65 (LNPRT Edition) | The Non-Profit Sentinel
-    Modul aktif: Isolated Log Buffer, Expanded LNPRT Lexical, Absolute SLM Prompt, Deterministic Caching.
+    BMEI Sentinel (Bandung Municipality Export and Import) | V65.1
+    
+    This script facilitates automated investigative auditing of trade phenomena 
+    specifically for the Bandung region. Integrated with local SLM (Ollama)
+    for high-fidelity discourse analysis and deterministic data caching.
     """
     def __init__(self, args):
         self.args = args
         self.sites = [
-            "bandung.go.id", "jabarprov.go.id", "jabar.tribunnews.com",
+            "bandung.go.id",
             "tempo.co", "tirto.id", "narasi.tv", "ayobandung.com", "pikiran-rakyat.com", 
-            "bandung.kompas.com", "detik.com", "liputan6.com", "republika.co.id", "suara.com"
+            "bandung.kompas.com", "disdagin.bandung.go.id",
+            "radarbandung.id", "kumparan.com", "cnnindonesia.com",
+            "rri.co.id", "infobandungkota.com", "prfmnews.id", 
+            "kilasbandungnews.com", "bandungbergerak.id", "koranmandala.com", 
+            "jabarekspres.com", "jabarprov.go.id", "jabar.tribunnews.com"
         ]
         
         self.edge_source_dir = str(Path.home() / "AppData" / "Local" / "Microsoft" / "Edge" / "User Data")
         self.workspace_dir = Path.cwd() / "data" / "edge_workspace"
-        self.export_dir = Path.cwd() / "data" / "lnprt"
-        self.visited_file = Path.cwd() / "visited_lnprt_urls.txt"
+        self.export_dir = Path.cwd() / "data" / "bmei"
+        self.visited_file = Path.cwd() / "visited_bmei_urls.txt"
         
         os.makedirs(self.workspace_dir, exist_ok=True)
         os.makedirs(self.export_dir, exist_ok=True)
@@ -52,7 +59,7 @@ class BPS_LNPRT_Sentinel:
         self.load_visited_urls()
         
         self.ollama_url = "http://localhost:11434/api/generate"
-        self.model_name = "bps-auditor" 
+        self.model_name = "bmei-auditor" 
         
         self.browser_semaphore = asyncio.Semaphore(2)
         
@@ -61,7 +68,7 @@ class BPS_LNPRT_Sentinel:
                 "STRICT_ANCHORS": [
                     r"\bkota[\s\-]?bandung\b", r"\bpemkot[\s\-]?bandung\b", 
                     r"\bwali[\s\-]?kota[\s\-]?bandung\b", r"\bbandung[\s\-]?kota\b", r"\bdprd[\s\-]?kota[\s\-]?bandung\b",
-                    r"\bdinsos[\s\-]?kota[\s\-]?bandung\b", r"\bkesbangpol[\s\-]?kota[\s\-]?bandung\b"
+                    r"\bdisdagin[\s\-]?kota[\s\-]?bandung\b", r"\bdkpp[\s\-]?kota[\s\-]?bandung\b"
                 ],
                 "DISTRICTS": [
                     r"\bandir\b", r"\bastana[\s\-]?anyar\b", r"\bantapani\b", r"\barcamanik\b", r"\bbabakan[\s\-]?ciparay\b", 
@@ -91,44 +98,42 @@ class BPS_LNPRT_Sentinel:
                     r"\bpapua\b", r"\bmaluku\b", r"\bambon\b", r"\bntb\b", r"\bmataram\b", r"\bntt\b", r"\bkupang\b"
                 ]
             },
-            "LNPRT_ACTIVITIES": [
-                r"\bmemberikan bantuan\b", r"\bmenyalurkan sumbangan\b", r"\bbakti sosial\b", r"\bbaksos\b", r"\bdonasi\b", 
-                r"\bsedekah\b", r"\bkhitanan massal\b", r"\bdonor darah\b", r"\bpembagian sembako\b", r"\bberbagi takjil\b", 
-                r"\bmenyalurkan zakat\b", r"\binfaq\b", r"\bpembagian daging kurban\b", r"\bqurban\b", r"\bhewan kurban\b", 
-                r"\bsantunan\b", r"\btali asih\b", r"\bbeasiswa\b", r"\bpenggalangan dana\b", r"\bfundraising\b", r"\bgalang dana\b",
-                r"\bmusyawarah cabang\b", r"\bmuscab\b", r"\bmusda\b", r"\bmuktammar\b", r"\bdeklarasi\b", r"\breuni akbar\b", 
-                r"\bpelantikan pengurus\b", r"\bkampanye\b", r"\bkonsolidasi\b", r"\bmilad\b", r"\bharlah\b", r"\bjalan sehat\b", 
-                r"\bgerak jalan\b", r"\bsepeda gembira\b", r"\btabligh akbar\b", r"\bpengajian\b", r"\brapat kerja\b", r"\braker\b", 
-                r"\brapat pimpinan\b", r"\brapim\b", r"\bbuka bersama\b", r"\bbukber\b", r"\bhalal bihalal\b", r"\bhalalbihalal\b", 
-                r"\bsilaturahmi\b", r"\bdies natalis\b"
-            ],
-            "LNPRT_ENTITIES": [
-                r"\byayasan\b", r"\bbaznas\b", r"\blazis\b", r"\bdt peduli\b", r"\brumah zakat\b", r"\bdompet dhuafa\b", 
-                r"\bpanti asuhan\b", r"\bmasjid raya\b", r"\bgereja\b", r"\bpanti jompo\b", r"\bpesantren\b", r"\bpondok pesantren\b", 
-                r"\bponpes\b", r"\bmajelis taklim\b", r"\bnu\b", r"\bnahdlatul ulama\b", r"\bmuhammadiyah\b", r"\bpersis\b",
-                r"\bikatan alumni\b", r"\bika unpad\b", r"\bika itb\b", r"\bpgri\b", r"\bidi\b", r"\bpwi\b", r"\bserikat pekerja\b", 
-                r"\bpartai buruh\b", r"\blsm\b", r"\bkarang taruna\b", r"\bpkk\b", r"\bkomunitas\b", r"\bpaguyuban\b", r"\bfkppi\b", 
-                r"\bikatan dokter\b", r"\bknpi\b", r"\bpramuka\b", r"\bjambore\b",
-                r"\bpartai politik\b", r"\bdpc\b", r"\bdpd\b", r"\bdpw\b", r"\bpdi perjuangan\b", r"\bgolkar\b", r"\bgerindra\b", 
-                r"\bpks\b", r"\bdemokrat\b", r"\bnasdem\b", r"\bpan\b", r"\bpkb\b", r"\bpsi\b", r"\bgelora\b", r"\bhanura\b", 
-                r"\bperindo\b", r"\bpartai umat\b",
-                r"\bormas\b", r"\bpemuda pancasila\b", r"\bmanggala\b", r"\bgibad\b", r"\bams\b", r"\bbrigez\b"
+            "TRADE_FLUX": {
+                "INTERNASIONAL": [
+                    r"\bekspor\b", r"\bimpor\b", r"\bpasar[\s\-]?global\b", r"\bpasar[\s\-]?internasional\b", 
+                    r"\bmancanegara\b", r"\bluar[\s\-]?negeri\b", r"\bbea[\s\-]?cukai\b", r"\bkite[\s\-]?ikm\b"
+                ],
+                "ANTAR_DAERAH": [
+                    r"\bpasokan\b", r"\bsuplai\b", r"\brantai[\s\-]?pasok\b", r"\blogistik\b", 
+                    r"\bdistribusi\b", r"\bantar[\s\-]?daerah\b", r"\bantar[\s\-]?provinsi\b", r"\bkontainer\b", r"\bdry[\s\-]?port\b"
+                ],
+                "INDICATORS": [
+                    r"\bkelangkaan\b", r"\bkenaikan[\s\-]?harga\b", r"\bstok\b", r"\bfluktuasi\b", 
+                    r"\bharga[\s\-]?eceran\b", r"\bhet\b", r"\binflasi\b", r"\bdefisit\b", r"\bsurplus\b"
+                ]
+            },
+            "COMMODITIES": [
+                r"\bberas\b", r"\bjagung\b", r"\bminyak[\s\-]?goreng\b", r"\bgula\b", r"\bterigu\b", r"\bkedelai\b",
+                r"\bcabai\b", r"\bbawang\b", r"\bsayur\b", r"\bdaging\b", r"\btelur\b", r"\bpakaian\b", r"\bgarmen\b", 
+                r"\bsepatu\b", r"\btekstil\b", r"\bsemen\b", r"\belpiji\b", r"\bbbm\b", r"\bkopi\b", r"\bkakao\b", r"\bkosmetik\b"
             ],
             "NOISE_WORDS": [
                 r"\bpiala\b", r"\bliga\b", r"\bgempa\b", r"\bkecelakaan\b", r"\bpembunuhan\b", r"\bpersib\b", 
-                r"\bskandal\b", r"\bhakim\b", r"\bperadilan\b", r"\bnarkoba\b", r"\btiket\b", r"\bkonser\b", 
-                r"\bwisatawan\b", r"\bkuliner\b", r"\bbpbd\b", r"\bcuaca ekstrem\b", 
-                r"\bpohon tumbang\b", r"\bhujan deras\b", r"\bbunuh diri\b", r"\bpengeroyokan\b",
-                r"\bcpns\b", r"\blowongan\b", r"\bloker\b", r"\brekrutmen\b", r"\bsman\b", r"\bsmpn\b", r"\bsdn\b",
+                r"\bskandal\b", r"\bpilkada\b", r"\bkampanye\b", r"\bcapres\b", r"\bcawalkot\b", r"\bpartai\b",
+                r"\bhakim\b", r"\bperadilan\b", r"\bnarkoba\b", r"\btiket\b", r"\bkonser\b", r"\bsurat[\s\-]?suara\b",
+                r"\bwisatawan\b", r"\bkuliner\b", r"\bbpbd\b", r"\bbencana\b", r"\bcuaca ekstrem\b", 
+                r"\bpohon tumbang\b", r"\bhujan deras\b", r"\bkpu\b", r"\bbawaslu\b", r"\blogistik pemilu\b", 
+                r"\bbunuh diri\b", r"\bpengeroyokan\b",
+                r"\bcpns\b", r"\blowongan\b", r"\bloker\b", r"\brekrutmen\b",
                 r"\bkampus\b", r"\buniversitas\b", r"\binstitut\b", r"\bpoliteknik\b", r"\bakademi\b", r"\bsekolah tinggi\b",
                 r"\buin\b", r"\bitb\b", r"\bunpas\b", r"\bunpad\b", r"\bupi\b", r"\btelkom university\b", r"\bunpar\b", r"\bunisba\b",
                 r"\bmahasiswa\b", r"\bdosen\b", r"\bguru besar\b", r"\brektor\b", r"\bdekan\b", 
-                r"\bwisuda\b", r"\bsnbt\b", r"\bppdb\b", r"\bkemendikdasmen\b",
-                r"\bskripsi\b", r"\btesis\b", r"\bdisertasi\b", 
+                r"\bwisuda\b", r"\bdies natalis\b", r"\bsnbt\b", r"\bppdb\b", r"\bkemendikdasmen\b",
+                r"\bseminar\b", r"\bwebinar\b", r"\bsimposium\b", r"\blokakarya\b", r"\bkonferensi\b", 
+                r"\bsidang terbuka\b", r"\bskripsi\b", r"\btesis\b", r"\bdisertasi\b", r"\bsman\b", r"\bsmpn\b", 
+                r"\bpramuka\b", r"\bjambore\b",
                 r"\bmobil dinas\b", r"\bkendaraan dinas\b", r"\baparatur sipil negara\b", r"\basn\b", r"\bwfh\b", 
-                r"\bapel pagi\b", r"\bmutasi jabatan\b", r"\brotasi jabatan\b", r"\bdisiplin pegawai\b", r"\bkinerja asn\b",
-                r"\bbansos kemensos\b", r"\bapbd\b", r"\bapbn\b", r"\bdana desa\b", r"\bblt\b", 
-                r"\bbantuan langsung tunai\b", r"\bpkh\b", r"\bprogram keluarga harapan\b", r"\bcsr\b"
+                r"\bapel pagi\b", r"\bmutasi jabatan\b", r"\brotasi jabatan\b", r"\bdisiplin pegawai\b", r"\bkinerja asn\b"
             ],
             "TITLE_BLACKLIST": [
                 "pegawai", "sejarah", "visi", "misi", "tupoksi", "kontak", "gallery", 
@@ -212,8 +217,10 @@ class BPS_LNPRT_Sentinel:
         combined = f"{title} {url}".lower()
         
         has_strong_anchor = any(re.search(a, title_lower) for a in self.config["GEOGRAPHY"]["STRICT_ANCHORS"])
-        has_activity = any(re.search(t, title_lower) for t in self.config["LNPRT_ACTIVITIES"])
-        has_entity = any(re.search(c, title_lower) for c in self.config["LNPRT_ENTITIES"])
+        has_trade_intl = any(re.search(t, title_lower) for t in self.config["TRADE_FLUX"]["INTERNASIONAL"])
+        has_trade_dom = any(re.search(t, title_lower) for t in self.config["TRADE_FLUX"]["ANTAR_DAERAH"] + self.config["TRADE_FLUX"]["INDICATORS"])
+        has_commodity = any(re.search(c, title_lower) for c in self.config["COMMODITIES"])
+        has_trade = has_trade_intl or (has_trade_dom and has_commodity)
         
         if any(b in title_lower for b in self.config["TITLE_BLACKLIST"]): 
             return True, "Halaman Statis/Administratif"
@@ -222,8 +229,8 @@ class BPS_LNPRT_Sentinel:
                 return True, "Ekstensi Dokumen Non-Naratif"
 
         is_noise = any(re.search(n, title_lower) for n in self.config["NOISE_WORDS"]) or any(re.search(n, combined) for n in self.config["NOISE_WORDS"])
-        if is_noise and not (has_strong_anchor and (has_activity or has_entity)): 
-            return True, "Terdeteksi Noise Konteks (Akademis Murni/Kriminal/Bencana/Birokrasi/APBD)"
+        if is_noise and not (has_strong_anchor and has_trade): 
+            return True, "Terdeteksi Noise Konteks (Akademis/Kriminal/Bencana/Birokrasi)"
         
         is_blacklisted = any(re.search(b, title_lower) for b in self.config["GEOGRAPHY"]["BLACKLIST"])
         if is_blacklisted and not has_strong_anchor: 
@@ -286,13 +293,15 @@ class BPS_LNPRT_Sentinel:
         has_strong_anchor = any(re.search(g, combined) for g in self.config["GEOGRAPHY"]["STRICT_ANCHORS"])
         has_strict_geo = has_strong_anchor or any(re.search(d, combined) for d in self.config["GEOGRAPHY"]["DISTRICTS"])
 
-        has_activity = any(re.search(t, combined) for t in self.config["LNPRT_ACTIVITIES"])
-        has_entity = any(re.search(c, combined) for c in self.config["LNPRT_ENTITIES"])
+        has_trade_intl = any(re.search(t, combined) for t in self.config["TRADE_FLUX"]["INTERNASIONAL"])
+        has_trade_domestic = any(re.search(t, combined) for t in self.config["TRADE_FLUX"]["ANTAR_DAERAH"] + self.config["TRADE_FLUX"]["INDICATORS"])
+        has_commodity = any(re.search(c, combined) for c in self.config["COMMODITIES"])
+        has_trade = has_trade_intl or (has_trade_domestic and has_commodity)
 
         is_noise = any(re.search(n, combined) for n in self.config["NOISE_WORDS"])
         
-        if is_noise and not (has_strong_anchor and (has_activity or has_entity)): 
-            return False, "Terdeteksi Noise Akademis Murni/Kriminal/Bencana/Birokrasi/APBD"
+        if is_noise and not (has_strong_anchor and has_trade): 
+            return False, "Terdeteksi Noise Akademis/Kriminal/Bencana/Birokrasi (Tanpa Anchor Dagang Kuat)"
         
         is_blacklisted = any(re.search(b, combined) for b in self.config["GEOGRAPHY"]["BLACKLIST"])
         if is_blacklisted and not has_strong_anchor: 
@@ -301,10 +310,10 @@ class BPS_LNPRT_Sentinel:
         if not has_strict_geo: 
             return False, "Gagal Geofencing (Tidak eksplisit menyebut Kota Bandung)"
 
-        if has_activity or has_entity: 
-            return True, "Lolos Leksikal: Indikator Kegiatan/Entitas LNPRT"
+        if has_trade: 
+            return True, "Lolos Leksikal: Perdagangan/Logistik Komoditas"
             
-        return False, "Lolos Geografi, namun miskin indikator LNPRT BPS"
+        return False, "Lolos Geografi, namun miskin indikator BPS"
 
     def smart_truncate(self, text):
         text_lower = text.lower()
@@ -322,18 +331,18 @@ class BPS_LNPRT_Sentinel:
 
     async def interrogate_with_llama(self, article_text, task_log):
         truncated_text = self.smart_truncate(article_text)
-        task_log.append("     [>] Mengirim Smart Context Window ke Hakim SLM (Ollama)...")
+        task_log.append("     [>] Mengirim Smart Context Window ke SLM (Ollama)...")
         
         custom_prompt = f"""
-        Lakukan audit investigatif pada teks berita berikut untuk mengidentifikasi fenomena Pengeluaran Lembaga Non-Profit yang Melayani Rumah Tangga (LNPRT) di Kota Bandung (kebutuhan Badan Pusat Statistik).
-        Keluarkan format JSON MURNI dengan keys: "status_geografi", "entitas_ditemukan", "jenis_pengeluaran_kegiatan", "skor_relevansi_bps".
+        Lakukan audit investigatif pada teks berita berikut untuk kebutuhan Badan Pusat Statistik (BPS).
+        Keluarkan format JSON MURNI dengan keys: "status_geografi", "entitas_ditemukan", "indikator_perdagangan", "anomali_atau_hidden_agenda", "skor_relevansi_bps".
         
         ATURAN YURISDIKSI SANGAT PENTING (HUKUM ABSOLUT):
-        1. Status Geofencing HARUS "Valid Kota Bandung" HANYA JIKA kegiatan fisik (pemberian bantuan, acara partai, reuni, deklarasi, dll) terjadi di Kota Bandung.
-        2. TOLAK BERITA (Geofencing: "Out of Jurisdiction" atau "Irrelevant Context") JIKA:
-           - BUKAN LNPRT: Berupa program bantuan resmi dari Pemerintah menggunakan dana APBN/APBD/Bansos Kemensos.
-           - BUKAN PENGELUARAN: Hanya opini politik, ceramah agama, atau diskusi kampus yang tidak memiliki indikator pengeluaran riil (tidak ada penyaluran dana/barang, tidak ada acara fisik yang memakan biaya).
-           - Berupa kebijakan birokrasi ASN.
+        1. Status Geofencing HARUS "Valid Kota Bandung" HANYA JIKA peristiwa riil (arus barang, logistik, inflasi pasar) terjadi secara fisik di Kota Bandung.
+        2. TOLAK BERITA (Geofencing: "Diluar Yuridiksi" atau "Konteks Tidak Relevan") JIKA:
+           - Berita berupa kebijakan administratif internal instansi (seperti aturan penggunaan mobil dinas, jam kerja, WFH, apel pagi, disiplin ASN) yang tidak memengaruhi ketersediaan barang di pasar.
+           - Berupa opini, seminar, diskusi kampus, dies natalis, atau pernyataan akademis tanpa data empiris kejadian di lapangan Kota Bandung.
+           - Merupakan rilis data Kementerian/Pusat (harga nasional/SP2KP) tanpa mencantumkan kondisi lapangan (wawancara pedagang/harga spesifik) di pasar wilayah Kota Bandung.
         
         Teks Berita:
         {truncated_text}
@@ -358,16 +367,15 @@ class BPS_LNPRT_Sentinel:
     def save_checkpoint(self):
         if not self.session_data: return
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        filename = self.export_dir / f"bps_audit_lnprt_{timestamp}.xlsx"
+        filename = self.export_dir / f"audit_report_bmei_{timestamp}.xlsx"
         df = pd.DataFrame(self.session_data)
-        cols = ["Tanggal Terbit Publikasi", "Tanggal Ekstraksi", "Sumber", "Judul", "URL", "Status Geografi", "Entitas Terdeteksi", "Jenis Pengeluaran/Kegiatan", "Skor", "Teks"]
-        df = df.rename(columns={"Indikator Dagang": "Jenis Pengeluaran/Kegiatan"})
+        cols = ["Tanggal Terbit Publikasi", "Tanggal Ekstraksi", "Sumber", "Judul", "URL", "Status Geografi", "Entitas Terdeteksi", "Indikator Dagang", "Anomali", "Skor", "Teks"]
         df = df[[c for c in cols if c in df.columns]]
 
         writer = pd.ExcelWriter(filename, engine='xlsxwriter')
-        df.to_excel(writer, index=False, sheet_name='Audit LNPRT')
+        df.to_excel(writer, index=False, sheet_name='Audit SLM')
         workbook = writer.book
-        worksheet = writer.sheets['Audit LNPRT']
+        worksheet = writer.sheets['Audit SLM']
         url_idx = df.columns.get_loc("URL")
         for row_num, url in enumerate(df["URL"]):
             if pd.notna(url) and str(url).startswith("http"):
@@ -375,7 +383,7 @@ class BPS_LNPRT_Sentinel:
         writer.close()
 
     def _build_search_query(self, site):
-        base_query = f'site:{site} "Kota Bandung" (yayasan OR "ikatan alumni" OR donasi OR "partai politik" OR panti OR baznas OR "lazis" OR "lembaga swadaya" OR "bakti sosial")'
+        base_query = f'site:{site} "Kota Bandung" (ekspor OR impor OR "bea cukai" OR logistik)'
         if self.args.start: base_query += f' after:{self.args.start}'
         if self.args.end: base_query += f' before:{self.args.end}'
         return urllib.parse.quote(base_query)
@@ -466,7 +474,7 @@ class BPS_LNPRT_Sentinel:
                         status_geo = audit_result.get("status_geografi", "Unknown")
                         task_log.append(f"     [SLM JUDGE] Geofencing: {status_geo}")
                         
-                        if "Out of Jurisdiction" not in status_geo and "Irrelevant Context" not in status_geo:
+                        if "Diluar Yuridiksi" not in status_geo and "Konteks Tidak Relevan" not in status_geo:
                             self.session_data.append({
                                 "Tanggal Terbit Publikasi": published_date,
                                 "Tanggal Ekstraksi": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
@@ -475,11 +483,12 @@ class BPS_LNPRT_Sentinel:
                                 "URL": real_url, 
                                 "Status Geografi": status_geo,
                                 "Entitas Terdeteksi": ", ".join(audit_result.get("entitas_ditemukan", [])),
-                                "Jenis Pengeluaran/Kegiatan": audit_result.get("jenis_pengeluaran_kegiatan", ""),
+                                "Indikator Dagang": audit_result.get("indikator_perdagangan", ""),
+                                "Anomali": audit_result.get("anomali_atau_hidden_agenda", ""),
                                 "Skor": audit_result.get("skor_relevansi_bps", 0),
                                 "Teks": purified_text[:1500] 
                             })
-                            task_log.append(f"     [SECURED] Lolos audit LNPRT BPS & SLM. {link_text}")
+                            task_log.append(f"     [SECURED] Lolos audit BPS & SLM. {link_text}")
                             pacing_type = "normal" 
                             await self._commit_to_permanent_blacklist(real_url)
                         else:
@@ -515,14 +524,14 @@ class BPS_LNPRT_Sentinel:
             sys.exit(1)
 
         print("\n" + "="*75)
-        print(" SURGICAL DEBUGGER V65 (LNPRT EDITION) | THE NON-PROFIT SENTINEL")
+        print(" BMEIS (Bandung Municapality's Export and Import Phenomenon Scraper | v.65) ")
         if self.args.start or self.args.end:
             print(f" Rentang Waktu: {self.args.start} hingga {self.args.end}")
         print("="*75)
 
         self.prepare_workspace()
         
-        print("\n[RADAR] Mengumpulkan heuristik intelijen LNPRT dari seluruh sumber...")
+        print("\n[RADAR] Mengumpulkan heuristik intelijen dari seluruh sumber secara paralel...")
         rss_tasks = [self.fetch_rss(site) for site in self.sites]
         rss_results = await asyncio.gather(*rss_tasks)
         
@@ -542,10 +551,10 @@ class BPS_LNPRT_Sentinel:
         print(f"[RADAR] Menemukan {len(all_entries)} target potensial ({cached_count} sudah diaudit sebelumnya, {len(new_targets)} target baru).")
         
         if not new_targets:
-            print("[✓] Semua target hari ini sudah diekstraksi. Menutup sistem dengan anggun.")
+            print("[✓] Semua target hari ini sudah diekstraksi. Menutup sistem dengan senyap.")
             sys.exit(0)
             
-        print("[RADAR] Memulai pembedahan asinkron untuk target LNPRT baru...\n")
+        print("[RADAR] Memulai pembedahan asinkron untuk target baru...\n")
 
         context = None
         try:
@@ -573,10 +582,10 @@ class BPS_LNPRT_Sentinel:
             sys.exit(0)
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="BPS LNPRT Investigative Scraper")
+    parser = argparse.ArgumentParser(description="BPS Investigative Scraper")
     parser.add_argument('--mode', type=str, default='live', help='Mode eksekusi (live/history)')
     parser.add_argument('--start', type=str, default='', help='Format: YYYY-MM-DD')
     parser.add_argument('--end', type=str, default='', help='Format: YYYY-MM-DD')
     args = parser.parse_args()
     
-    asyncio.run(BPS_LNPRT_Sentinel(args).run())
+    asyncio.run(BPS_Absolute_Sentinel(args).run())

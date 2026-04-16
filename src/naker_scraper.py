@@ -20,27 +20,23 @@ import warnings
 
 warnings.filterwarnings("ignore")
 
-class BPS_Absolute_Sentinel:
+class BPS_Naker_Sentinel:
     """
-    BMEIS (Bandung Municapality's Export and Import Phenomenon Scraper | v.65
-    Modul aktif: Isolated Log Buffer, Aggressive Lexical Filter, Absolute SLM Prompt, Deterministic Caching.
+    Surgical Debugger V65 (Ketenagakerjaan Edition) | The Naker Sentinel
+    Modul aktif: Isolated Log Buffer, KBLI-Aligned Prompt, Naker Lexical, Confidence Scoring.
     """
     def __init__(self, args):
         self.args = args
         self.sites = [
-            "bandung.go.id",
+            "bandung.go.id", "jabarprov.go.id", "jabar.tribunnews.com",
             "tempo.co", "tirto.id", "narasi.tv", "ayobandung.com", "pikiran-rakyat.com", 
-            "bandung.kompas.com", "disdagin.bandung.go.id",
-            "radarbandung.id", "kumparan.com", "cnnindonesia.com",
-            "rri.co.id", "infobandungkota.com", "prfmnews.id", 
-            "kilasbandungnews.com", "bandungbergerak.id", "koranmandala.com", 
-            "jabarekspres.com", "jabarprov.go.id", "jabar.tribunnews.com"
+            "bandung.kompas.com", "disnaker.bandung.go.id", "detik.com", "liputan6.com"
         ]
         
         self.edge_source_dir = str(Path.home() / "AppData" / "Local" / "Microsoft" / "Edge" / "User Data")
         self.workspace_dir = Path.cwd() / "data" / "edge_workspace"
-        self.export_dir = Path.cwd() / "data" / "exports"
-        self.visited_file = Path.cwd() / "visited_urls.txt"
+        self.export_dir = Path.cwd() / "data" / "naker"
+        self.visited_file = Path.cwd() / "visited_naker_urls.txt"
         
         os.makedirs(self.workspace_dir, exist_ok=True)
         os.makedirs(self.export_dir, exist_ok=True)
@@ -65,7 +61,7 @@ class BPS_Absolute_Sentinel:
                 "STRICT_ANCHORS": [
                     r"\bkota[\s\-]?bandung\b", r"\bpemkot[\s\-]?bandung\b", 
                     r"\bwali[\s\-]?kota[\s\-]?bandung\b", r"\bbandung[\s\-]?kota\b", r"\bdprd[\s\-]?kota[\s\-]?bandung\b",
-                    r"\bdisdagin[\s\-]?kota[\s\-]?bandung\b", r"\bdkpp[\s\-]?kota[\s\-]?bandung\b"
+                    r"\bdisdagin[\s\-]?kota[\s\-]?bandung\b", r"\bdkpp[\s\-]?kota[\s\-]?bandung\b", r"\bdisnaker[\s\-]?kota[\s\-]?bandung\b"
                 ],
                 "DISTRICTS": [
                     r"\bandir\b", r"\bastana[\s\-]?anyar\b", r"\bantapani\b", r"\barcamanik\b", r"\bbabakan[\s\-]?ciparay\b", 
@@ -95,24 +91,22 @@ class BPS_Absolute_Sentinel:
                     r"\bpapua\b", r"\bmaluku\b", r"\bambon\b", r"\bntb\b", r"\bmataram\b", r"\bntt\b", r"\bkupang\b"
                 ]
             },
-            "TRADE_FLUX": {
-                "INTERNASIONAL": [
-                    r"\bekspor\b", r"\bimpor\b", r"\bpasar[\s\-]?global\b", r"\bpasar[\s\-]?internasional\b", 
-                    r"\bmancanegara\b", r"\bluar[\s\-]?negeri\b", r"\bbea[\s\-]?cukai\b", r"\bkite[\s\-]?ikm\b"
-                ],
-                "ANTAR_DAERAH": [
-                    r"\bpasokan\b", r"\bsuplai\b", r"\brantai[\s\-]?pasok\b", r"\blogistik\b", 
-                    r"\bdistribusi\b", r"\bantar[\s\-]?daerah\b", r"\bantar[\s\-]?provinsi\b", r"\bkontainer\b", r"\bdry[\s\-]?port\b"
-                ],
-                "INDICATORS": [
-                    r"\bkelangkaan\b", r"\bkenaikan[\s\-]?harga\b", r"\bstok\b", r"\bfluktuasi\b", 
-                    r"\bharga[\s\-]?eceran\b", r"\bhet\b", r"\binflasi\b", r"\bdefisit\b", r"\bsurplus\b"
-                ]
-            },
-            "COMMODITIES": [
-                r"\bberas\b", r"\bjagung\b", r"\bminyak[\s\-]?goreng\b", r"\bgula\b", r"\bterigu\b", r"\bkedelai\b",
-                r"\bcabai\b", r"\bbawang\b", r"\bsayur\b", r"\bdaging\b", r"\btelur\b", r"\bpakaian\b", r"\bgarmen\b", 
-                r"\bsepatu\b", r"\btekstil\b", r"\bsemen\b", r"\belpiji\b", r"\bbbm\b", r"\bkopi\b", r"\bkakao\b", r"\bkosmetik\b"
+            "NAKER_POSITIF": [
+                r"\bbuka lowongan\b", r"\brekrutmen\b", r"\brekrutmen masal\b", r"\bjob fair\b", r"\bpadat karya\b", r"\bserap tenaga kerja\b", 
+                r"\bmembuka lapangan kerja\b", r"\btambah karyawan\b", r"\bpabrik baru\b", r"\bpeningkatan produksi\b", 
+                r"\bpanen raya\b", r"\bmusim tanam\b", r"\bekspansi bisnis\b", r"\bproyek infrastruktur\b", r"\binvestasi baru\b",
+                r"\bpenyerapan tenaga kerja\b", r"\bperekrutan\b", r"\bbuka pabrik\b", r"\bpenambahan jam kerja\b"
+            ],
+            "NAKER_NEGATIF": [
+                r"\bphk\b", r"\bpemutusan hubungan kerja\b", r"\bdirumahkan\b", r"\bpabrik tutup\b", r"\bgulung tikar\b", 
+                r"\bbangkrut\b", r"\bkurangi karyawan\b", r"\bgagal panen\b", r"\bpuso\b", r"\bsepi pembeli\b", 
+                r"\bomzet turun\b", r"\bdaya beli turun\b", r"\bpemangkasan produksi\b", r"\bpemecatan\b", r"\bpengangguran\b",
+                r"\bberhenti beroperasi\b", r"\btutup pabrik\b", r"\bkemarau panjang\b", r"\bbanjir merendam sawah\b"
+            ],
+            "NAKER_ISU": [
+                r"\bupah minimum\b", r"\bumk\b", r"\bump\b", r"\bdemo buruh\b", r"\btunjangan\b", r"\bthr\b", r"\bgaji\b", 
+                r"\bserikat pekerja\b", r"\boutsourcing\b", r"\bpekerja kontrak\b", r"\bkesejahteraan buruh\b", r"\bpemogokan\b",
+                r"\baksi mogok\b", r"\bhak pekerja\b", r"\bjamsostek\b", r"\bbpjs ketenagakerjaan\b", r"\bpesangon\b"
             ],
             "NOISE_WORDS": [
                 r"\bpiala\b", r"\bliga\b", r"\bgempa\b", r"\bkecelakaan\b", r"\bpembunuhan\b", r"\bpersib\b", 
@@ -121,7 +115,7 @@ class BPS_Absolute_Sentinel:
                 r"\bwisatawan\b", r"\bkuliner\b", r"\bbpbd\b", r"\bbencana\b", r"\bcuaca ekstrem\b", 
                 r"\bpohon tumbang\b", r"\bhujan deras\b", r"\bkpu\b", r"\bbawaslu\b", r"\blogistik pemilu\b", 
                 r"\bbunuh diri\b", r"\bpengeroyokan\b",
-                r"\bcpns\b", r"\blowongan\b", r"\bloker\b", r"\brekrutmen\b",
+                r"\bsyarat pendaftaran\b", r"\bcara melamar\b", r"\blink pendaftaran\b", r"\bkirim lamaran\b", r"\bscan barcode\b",
                 r"\bkampus\b", r"\buniversitas\b", r"\binstitut\b", r"\bpoliteknik\b", r"\bakademi\b", r"\bsekolah tinggi\b",
                 r"\buin\b", r"\bitb\b", r"\bunpas\b", r"\bunpad\b", r"\bupi\b", r"\btelkom university\b", r"\bunpar\b", r"\bunisba\b",
                 r"\bmahasiswa\b", r"\bdosen\b", r"\bguru besar\b", r"\brektor\b", r"\bdekan\b", 
@@ -135,7 +129,7 @@ class BPS_Absolute_Sentinel:
             "TITLE_BLACKLIST": [
                 "pegawai", "sejarah", "visi", "misi", "tupoksi", "kontak", "gallery", 
                 "profil", "rencana strategis", "bab i", "powerpoint", "open data", 
-                "loker", "jurnal", "pengumuman", "layanan", "jadwal", "detail", "slidefabric",
+                "jurnal", "pengumuman", "layanan", "jadwal", "detail", "slidefabric",
                 "kode pos", "beranda", "home", "indeks", "index", "kategori", "registrasi imei"
             ],
             "DOCUMENT_EXTENSIONS": [
@@ -214,10 +208,9 @@ class BPS_Absolute_Sentinel:
         combined = f"{title} {url}".lower()
         
         has_strong_anchor = any(re.search(a, title_lower) for a in self.config["GEOGRAPHY"]["STRICT_ANCHORS"])
-        has_trade_intl = any(re.search(t, title_lower) for t in self.config["TRADE_FLUX"]["INTERNASIONAL"])
-        has_trade_dom = any(re.search(t, title_lower) for t in self.config["TRADE_FLUX"]["ANTAR_DAERAH"] + self.config["TRADE_FLUX"]["INDICATORS"])
-        has_commodity = any(re.search(c, title_lower) for c in self.config["COMMODITIES"])
-        has_trade = has_trade_intl or (has_trade_dom and has_commodity)
+        has_naker = (any(re.search(p, title_lower) for p in self.config["NAKER_POSITIF"]) or 
+                     any(re.search(n, title_lower) for n in self.config["NAKER_NEGATIF"]) or
+                     any(re.search(i, title_lower) for i in self.config["NAKER_ISU"]))
         
         if any(b in title_lower for b in self.config["TITLE_BLACKLIST"]): 
             return True, "Halaman Statis/Administratif"
@@ -226,8 +219,8 @@ class BPS_Absolute_Sentinel:
                 return True, "Ekstensi Dokumen Non-Naratif"
 
         is_noise = any(re.search(n, title_lower) for n in self.config["NOISE_WORDS"]) or any(re.search(n, combined) for n in self.config["NOISE_WORDS"])
-        if is_noise and not (has_strong_anchor and has_trade): 
-            return True, "Terdeteksi Noise Konteks (Akademis/Kriminal/Bencana/Birokrasi)"
+        if is_noise and not (has_strong_anchor and has_naker): 
+            return True, "Terdeteksi Noise Konteks (Loker Spam/Birokrasi/Lainnya)"
         
         is_blacklisted = any(re.search(b, title_lower) for b in self.config["GEOGRAPHY"]["BLACKLIST"])
         if is_blacklisted and not has_strong_anchor: 
@@ -290,15 +283,16 @@ class BPS_Absolute_Sentinel:
         has_strong_anchor = any(re.search(g, combined) for g in self.config["GEOGRAPHY"]["STRICT_ANCHORS"])
         has_strict_geo = has_strong_anchor or any(re.search(d, combined) for d in self.config["GEOGRAPHY"]["DISTRICTS"])
 
-        has_trade_intl = any(re.search(t, combined) for t in self.config["TRADE_FLUX"]["INTERNASIONAL"])
-        has_trade_domestic = any(re.search(t, combined) for t in self.config["TRADE_FLUX"]["ANTAR_DAERAH"] + self.config["TRADE_FLUX"]["INDICATORS"])
-        has_commodity = any(re.search(c, combined) for c in self.config["COMMODITIES"])
-        has_trade = has_trade_intl or (has_trade_domestic and has_commodity)
+        has_naker_pos = any(re.search(p, combined) for p in self.config["NAKER_POSITIF"])
+        has_naker_neg = any(re.search(n, combined) for n in self.config["NAKER_NEGATIF"])
+        has_naker_isu = any(re.search(i, combined) for i in self.config["NAKER_ISU"])
+        
+        has_naker = has_naker_pos or has_naker_neg or has_naker_isu
 
         is_noise = any(re.search(n, combined) for n in self.config["NOISE_WORDS"])
         
-        if is_noise and not (has_strong_anchor and has_trade): 
-            return False, "Terdeteksi Noise Akademis/Kriminal/Bencana/Birokrasi (Tanpa Anchor Dagang Kuat)"
+        if is_noise and not (has_strong_anchor and has_naker): 
+            return False, "Terdeteksi Noise (Loker Spam/Birokrasi/Lainnya) Tanpa Anchor Kuat"
         
         is_blacklisted = any(re.search(b, combined) for b in self.config["GEOGRAPHY"]["BLACKLIST"])
         if is_blacklisted and not has_strong_anchor: 
@@ -307,10 +301,10 @@ class BPS_Absolute_Sentinel:
         if not has_strict_geo: 
             return False, "Gagal Geofencing (Tidak eksplisit menyebut Kota Bandung)"
 
-        if has_trade: 
-            return True, "Lolos Leksikal: Perdagangan/Logistik Komoditas"
+        if has_naker: 
+            return True, "Lolos Leksikal: Indikator Ketenagakerjaan"
             
-        return False, "Lolos Geografi, namun miskin indikator BPS"
+        return False, "Lolos Geografi, namun miskin indikator Ketenagakerjaan BPS"
 
     def smart_truncate(self, text):
         text_lower = text.lower()
@@ -328,18 +322,24 @@ class BPS_Absolute_Sentinel:
 
     async def interrogate_with_llama(self, article_text, task_log):
         truncated_text = self.smart_truncate(article_text)
-        task_log.append("     [>] Mengirim Smart Context Window ke SLM (Ollama)...")
+        task_log.append("     [>] Mengirim Smart Context Window ke Hakim SLM (Ollama)...")
         
         custom_prompt = f"""
-        Lakukan audit investigatif pada teks berita berikut untuk kebutuhan Badan Pusat Statistik (BPS).
-        Keluarkan format JSON MURNI dengan keys: "status_geografi", "entitas_ditemukan", "indikator_perdagangan", "anomali_atau_hidden_agenda", "skor_relevansi_bps".
+        Lakukan audit investigatif pada teks berita berikut untuk laporan Fenomena Ketenagakerjaan BPS Kota Bandung.
+        Keluarkan format JSON MURNI dengan keys:
+        1. "status_geografi" (Valid Kota Bandung / Out of Jurisdiction / Irrelevant)
+        2. "ringkasan_berita" (Satu paragraf padat merangkum kejadian utama ketenagakerjaan).
+        3. "dampak_bekerja" (1 Naik / 2 Turun / 3 Tetap)
+        4. "dampak_pengangguran" (1 Naik / 2 Turun / 3 Tetap)
+        5. "kategori_kbli" (Pilih SATU Kategori Huruf A sampai U yang paling relevan beserta namanya. Misal: "C. Industri Pengolahan", "G. Perdagangan", dll).
+        6. "confidence_score" (0-100, seberapa yakin Anda dengan analisis dampak naik/turun ini berdasarkan teks).
         
-        ATURAN YURISDIKSI SANGAT PENTING (HUKUM ABSOLUT):
-        1. Status Geofencing HARUS "Valid Kota Bandung" HANYA JIKA peristiwa riil (arus barang, logistik, inflasi pasar) terjadi secara fisik di Kota Bandung.
-        2. TOLAK BERITA (Geofencing: "Out of Jurisdiction" atau "Irrelevant Context") JIKA:
-           - Berita berupa kebijakan administratif internal instansi (seperti aturan penggunaan mobil dinas, jam kerja, WFH, apel pagi, disiplin ASN) yang tidak memengaruhi ketersediaan barang di pasar.
-           - Berupa opini, seminar, diskusi kampus, dies natalis, atau pernyataan akademis tanpa data empiris kejadian di lapangan Kota Bandung.
-           - Merupakan rilis data Kementerian/Pusat (harga nasional/SP2KP) tanpa mencantumkan kondisi lapangan (wawancara pedagang/harga spesifik) di pasar wilayah Kota Bandung.
+        ATURAN ANALISIS (HUKUM ABSOLUT):
+        - Status Geofencing HARUS "Valid Kota Bandung" JIKA peristiwa terjadi secara fisik di Kota Bandung.
+        - Pekerja NAIK & Pengangguran TURUN jika: Pembukaan pabrik, job fair besar, ekspansi bisnis, proyek infrastruktur jalan.
+        - Pekerja TURUN & Pengangguran NAIK jika: PHK massal, pabrik tutup, gulung tikar, gagal panen, omzet anjlok drastis.
+        - Jika hanya membahas isu normatif (Tuntutan UMK, Aturan THR, Demo tanpa PHK), status keduanya adalah '3 Tetap'.
+        - TOLAK JIKA (Irrelevant): Hanya berita info lowongan kerja individual (cara melamar, link loker, syarat CPNS) yang tidak berdampak pada ekonomi makro. Atau jika peristiwa tidak terjadi di Bandung.
         
         Teks Berita:
         {truncated_text}
@@ -364,23 +364,50 @@ class BPS_Absolute_Sentinel:
     def save_checkpoint(self):
         if not self.session_data: return
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        filename = self.export_dir / f"bps_audit_historis_{timestamp}.xlsx"
+        filename = self.export_dir / f"bps_audit_naker_{timestamp}.xlsx"
+        
         df = pd.DataFrame(self.session_data)
-        cols = ["Tanggal Terbit Publikasi", "Tanggal Ekstraksi", "Sumber", "Judul", "URL", "Status Geografi", "Entitas Terdeteksi", "Indikator Dagang", "Anomali", "Skor", "Teks"]
+        cols = [
+            "Ringkasan Berita/Informasi Utama", 
+            "Sumber Berita (URL)", 
+            "Tanggal Berita", 
+            "Bekerja (1 Naik / 2 Turun / 3 Tetap)", 
+            "Pengangguran (1 Naik / 2 Turun / 3 Tetap)", 
+            "Kategori Lapangan Usaha (KBLI)",
+            "Confidence Score (%)",
+            "Status Geografi"
+        ]
+        
+        df = df.rename(columns={
+            "ringkasan_berita": "Ringkasan Berita/Informasi Utama",
+            "URL": "Sumber Berita (URL)",
+            "Tanggal Terbit Publikasi": "Tanggal Berita",
+            "dampak_bekerja": "Bekerja (1 Naik / 2 Turun / 3 Tetap)",
+            "dampak_pengangguran": "Pengangguran (1 Naik / 2 Turun / 3 Tetap)",
+            "kategori_kbli": "Kategori Lapangan Usaha (KBLI)",
+            "confidence_score": "Confidence Score (%)",
+            "Status Geografi": "Status Geografi"
+        })
+        
         df = df[[c for c in cols if c in df.columns]]
 
         writer = pd.ExcelWriter(filename, engine='xlsxwriter')
-        df.to_excel(writer, index=False, sheet_name='Audit SLM')
+        df.to_excel(writer, index=False, sheet_name='Fenomena Naker')
         workbook = writer.book
-        worksheet = writer.sheets['Audit SLM']
-        url_idx = df.columns.get_loc("URL")
-        for row_num, url in enumerate(df["URL"]):
+        worksheet = writer.sheets['Fenomena Naker']
+        url_idx = df.columns.get_loc("Sumber Berita (URL)")
+        
+        worksheet.set_column('A:A', 50)
+        worksheet.set_column('B:B', 15)
+        worksheet.set_column('C:H', 15)
+
+        for row_num, url in enumerate(df["Sumber Berita (URL)"]):
             if pd.notna(url) and str(url).startswith("http"):
                 worksheet.write_url(row_num + 1, url_idx, str(url), string="BACA ARTIKEL")
         writer.close()
 
     def _build_search_query(self, site):
-        base_query = f'site:{site} "Kota Bandung" (ekspor OR impor OR "bea cukai" OR logistik)'
+        base_query = f'site:{site} "Kota Bandung" (PHK OR "lowongan kerja" OR "job fair" OR "pabrik tutup" OR UMK OR buruh OR pengangguran OR "tenaga kerja" OR "padat karya")'
         if self.args.start: base_query += f' after:{self.args.start}'
         if self.args.end: base_query += f' before:{self.args.end}'
         return urllib.parse.quote(base_query)
@@ -469,23 +496,22 @@ class BPS_Absolute_Sentinel:
                         
                         audit_result = await self.interrogate_with_llama(purified_text, task_log)
                         status_geo = audit_result.get("status_geografi", "Unknown")
-                        task_log.append(f"     [SLM JUDGE] Geofencing: {status_geo}")
+                        confidence = audit_result.get("confidence_score", "N/A")
                         
-                        if "Out of Jurisdiction" not in status_geo and "Irrelevant Context" not in status_geo:
+                        task_log.append(f"     [SLM JUDGE] Geofencing: {status_geo} | Confidence: {confidence}%")
+                        
+                        if "Out of Jurisdiction" not in status_geo and "Irrelevant" not in status_geo:
                             self.session_data.append({
                                 "Tanggal Terbit Publikasi": published_date,
-                                "Tanggal Ekstraksi": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-                                "Sumber": site,
-                                "Judul": entry.title,
                                 "URL": real_url, 
                                 "Status Geografi": status_geo,
-                                "Entitas Terdeteksi": ", ".join(audit_result.get("entitas_ditemukan", [])),
-                                "Indikator Dagang": audit_result.get("indikator_perdagangan", ""),
-                                "Anomali": audit_result.get("anomali_atau_hidden_agenda", ""),
-                                "Skor": audit_result.get("skor_relevansi_bps", 0),
-                                "Teks": purified_text[:1500] 
+                                "ringkasan_berita": audit_result.get("ringkasan_berita", ""),
+                                "dampak_bekerja": audit_result.get("dampak_bekerja", ""),
+                                "dampak_pengangguran": audit_result.get("dampak_pengangguran", ""),
+                                "kategori_kbli": audit_result.get("kategori_kbli", ""),
+                                "confidence_score": confidence
                             })
-                            task_log.append(f"     [SECURED] Lolos audit BPS & SLM. {link_text}")
+                            task_log.append(f"     [SECURED] Lolos audit NAKER BPS & SLM. {link_text}")
                             pacing_type = "normal" 
                             await self._commit_to_permanent_blacklist(real_url)
                         else:
@@ -521,14 +547,14 @@ class BPS_Absolute_Sentinel:
             sys.exit(1)
 
         print("\n" + "="*75)
-        print(" BMEIS (Bandung Municapality's Export and Import Phenomenon Scraper | v.65) ")
+        print(" SURGICAL DEBUGGER V65 (NAKER EDITION) | THE WORKFORCE SENTINEL")
         if self.args.start or self.args.end:
             print(f" Rentang Waktu: {self.args.start} hingga {self.args.end}")
         print("="*75)
 
         self.prepare_workspace()
         
-        print("\n[RADAR] Mengumpulkan heuristik intelijen dari seluruh sumber secara paralel...")
+        print("\n[RADAR] Mengumpulkan heuristik intelijen Ketenagakerjaan dari seluruh sumber...")
         rss_tasks = [self.fetch_rss(site) for site in self.sites]
         rss_results = await asyncio.gather(*rss_tasks)
         
@@ -548,10 +574,10 @@ class BPS_Absolute_Sentinel:
         print(f"[RADAR] Menemukan {len(all_entries)} target potensial ({cached_count} sudah diaudit sebelumnya, {len(new_targets)} target baru).")
         
         if not new_targets:
-            print("[✓] Semua target hari ini sudah diekstraksi. Menutup sistem dengan senyap.")
+            print("[✓] Semua target hari ini sudah diekstraksi. Menutup sistem dengan anggun.")
             sys.exit(0)
             
-        print("[RADAR] Memulai pembedahan asinkron untuk target baru...\n")
+        print("[RADAR] Memulai pembedahan asinkron untuk target NAKER baru...\n")
 
         context = None
         try:
@@ -579,10 +605,10 @@ class BPS_Absolute_Sentinel:
             sys.exit(0)
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="BPS Investigative Scraper")
+    parser = argparse.ArgumentParser(description="BPS Naker Investigative Scraper")
     parser.add_argument('--mode', type=str, default='live', help='Mode eksekusi (live/history)')
     parser.add_argument('--start', type=str, default='', help='Format: YYYY-MM-DD')
     parser.add_argument('--end', type=str, default='', help='Format: YYYY-MM-DD')
     args = parser.parse_args()
     
-    asyncio.run(BPS_Absolute_Sentinel(args).run())
+    asyncio.run(BPS_Naker_Sentinel(args).run())

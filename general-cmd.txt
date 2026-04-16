@@ -1,8 +1,8 @@
 activating venv = .\venv\Scripts\Activate.ps1
 
 running scraper = python src/scraper.py
-running news scraper =  python src/news_scraper.py --mode history --start 2026-01-01 --end 2026-04-07
-running llama_scraper = python src/llama_scraper.py --mode history --start 2026-03-01 --end 2026-04-16
+running lnprt_scraper =  python src/lnprt_scraper.py --mode history --start YYYY-MM-DD --end YYYY-MM-DD
+running llama_scraper = python src/llama_scraper.py --mode history --start YYYY-MM-DD --end YYYY-MM-DD
 reset process = python src/scraper.py --reset
 
         {
@@ -61,7 +61,7 @@ Jika sempat mengalami kendala "rejected" dan file bocor:
 
 vvv
 git add .
-git commit -m "Efisiensi kode mesin-mesin inti"
+git commit -m "Catatan"
 git pull origin main --rebase
 git push origin main
 
