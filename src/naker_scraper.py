@@ -1,3 +1,4 @@
+# naker_scraper.py
 import os
 import sys
 import asyncio
