@@ -52,7 +52,11 @@ class BPS_Naker_Sentinel:
         self.load_visited_urls()
         
         self.ollama_url = "http://localhost:11434/api/generate"
+<<<<<<< HEAD
         self.model_name = "bps-auditor" 
+=======
+        self.model_name = "bps-naker" 
+>>>>>>> 12cb141 (Refactor: Sinkronisasi versi lokal stabil sebagai Single Source of Truth)
         
         self.browser_semaphore = asyncio.Semaphore(2)
         
