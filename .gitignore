@@ -1,0 +1,29 @@
+# Python internals
+venv/
+__pycache__/
+*.pyc
+.vscode/
+
+# Security & Config
+.env
+*.har
+*.txt
+config/
+GEMINI.md
+
+# Folders Data (Struktur & Output)
+/instagram\ structure/
+/laporan_tahunan/
+/bol_structure/
+/news\ structure/
+/data/
+/logs/
+/src/archive/
+
+# File Data Spesifik (Excel & Log)
+*.xlsx
+*.log
+visited_urls.txt
+STPIM.IIADetail*
+
+/bps_sentinel_v61.py

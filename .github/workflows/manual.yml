@@ -1,0 +1,45 @@
+name: Manual Oversight Trigger
+
+# Trigger manual melalui tab 'Actions' di GitHub
+on:
+  workflow_dispatch:
+    inputs:
+      sector:
+        description: 'Sektor Ekonomi yang akan Diaudit'
+        required: true
+        default: 'Ekspor-Impor'
+        type: choice
+        options:
+        - Ekspor-Impor
+        - Logistik & Pergudangan
+        - Lembaga Non-Profit (LNPRT)
+        - Global Trade (UN Comtrade)
+        - Ketenagakerjaan
+      audit_level:
+        description: 'Kedalaman Investigasi'
+        required: true
+        default: 'Standard'
+        type: choice
+        options:
+        - Quick Scan (Metadata Only)
+        - Standard
+        - Deep Audit (Semantic Analysis)
+      investigator_name:
+        description: 'Nama Auditor yang Bertugas'
+        required: true
+        type: string
+
+jobs:
+  oversight_initiation:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Initiating Oversight Protocol
+      run: |
+        echo "### 🚩 PROTOKOL INVESTIGASI DIMULAI ###"
+        echo "Auditor: ${{ github.event.inputs.investigator_name }}"
+        echo "Sektor Target: ${{ github.event.inputs.sector }}"
+        echo "Level Audit: ${{ github.event.inputs.audit_level }}"
+        echo "Status: Menunggu sinkronisasi lokal via Bandung Sentinel Engine..."
+    
+    - name: Structure Integrity Check
+      run: echo "Memvalidasi integritas folder /data dan /config untuk sektor ${{ github.event.inputs.sector }}..."

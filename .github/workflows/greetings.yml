@@ -1,0 +1,31 @@
+name: Greetings
+
+on: [pull_request_target, issues]
+
+jobs:
+  greeting:
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+      pull-requests: write
+    steps:
+    - uses: actions/first-interaction@v1
+      with:
+        repo-token: ${{ secrets.GITHUB_TOKEN }}
+        issue-message: |
+          ### 🌐 Selamat Datang!
+          Terima kasih telah membuka issue pertama Anda di proyek **Bandung Municipality's Phenomenon Scraper**. 
+
+          Input Anda sangat krusial untuk meminimalisir asimetri informasi dalam data publik. Mohon pastikan:
+          - [ ] Tidak ada API Key atau Password yang tertulis.
+          - [ ] Tidak ada data internal organisasi yang bersifat rahasia.
+
+          Kami akan segera meninjau laporan Anda. *In God we trust, all others must bring data.*
+
+        pr-message: |
+          ### 🚀 Kontribusi Hebat Terdeteksi!
+          Terima kasih telah mengirimkan Pull Request pertama Anda untuk mendukung **BPS Kota Bandung**.
+
+          Setiap perubahan kode akan melalui **Technical Audit** untuk memastikan kedaulatan data dan etika scraping tetap terjaga. Harap bersabar sementara sistem dan tim melakukan review terhadap kode Anda.
+
+          Selamat bergabung dalam ekosistem intelijen data kami!

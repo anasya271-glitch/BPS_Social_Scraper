@@ -1,0 +1,34 @@
+# 1. Label untuk Core Engine
+'⚙️ core-engine':
+  - any:
+    - 'src/*.py'
+    - 'src/!archive/*'
+
+# 2. Label untuk Konfigurasi & Target
+'⚙️ config-update':
+  - any:
+    - 'config/*.json'
+
+# 3. Label untuk Legacy/Archive Code
+'📦 archive':
+  - any:
+    - 'src/archive/*'
+
+# 4. Label untuk Dokumentasi
+'📝 documentation':
+  - any:
+    - '*.md'
+    - 'LICENSE'
+    - '.github/**/*'
+
+# 5. Label untuk Logika Llama / AI
+'🧠 ai-logic':
+  - any:
+    - 'src/bmei_scraper.py'
+    - 'src/bmei_debug.py'
+    - 'src/lnprt_scraper.py'
+    - 'src/instagram_scraper.py' 
+    - 'src/naker_scraper.py'
+    - 'modelfile_bmei'
+    - 'modelfile_naker'
+    - 'modelfile_lnprt'

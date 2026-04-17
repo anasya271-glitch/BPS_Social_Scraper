@@ -1,0 +1,33 @@
+name: Bandit Security Scan
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+  schedule:
+    - cron: '0 2 * * 0' # Otomatis berjalan setiap hari Minggu jam 02:00 pagi
+
+jobs:
+  bandit:
+    permissions:
+      contents: read # Hanya butuh akses baca untuk memindai kode
+      security-events: write # Akses untuk menulis laporan keamanan di tab Security GitHub
+      actions: read
+
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+          
+      - name: Install Bandit
+        run: pip install bandit
+        
+      - name: Run Bandit Scan
+        run: |
+          # Memindai folder /src, mengabaikan warning level rendah (-ll), dan mengeluarkan laporan
+          bandit -r src/ -ll -f custom
