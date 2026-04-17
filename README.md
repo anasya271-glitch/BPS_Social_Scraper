@@ -157,8 +157,9 @@ Proyek ini akan terus berkembang:
 
 | Kategori | Nama Alat | Deskripsi Fungsi | Tujuan Utama |
 | :--- | :--- | :--- | :--- |
-| ***Investigation*** | `llama_scraper.py` | Flagship tool dengan integrasi Ollama. | Audit investigatif berita Ekspor/Impor Bandung. |
+| ***Investigation*** | `bmei_scraper.py` | Flagship tool dengan integrasi Ollama. | Audit fenomena berita Ekspor/Impor Bandung. |
 | | `lnprt_scraper.py` | Versi adaptasi untuk sektor lembaga sosial. | Mendeteksi hibah, donasi internasional, dan aktivitas LNPRT. |
+| | `naker_scraper.py` | Versi adaptasi untuk sektor ketenagakerjaan. | Mendeteksi PHK, upah, penyerapan tenaga kerja. |
 | | `instagram_scraper.py` | Monitoring akun asosiasi & pelaku usaha. | Menangkap sentimen pasar dan tren logistik dari tangan pertama. |
 | | `g4wb_scraper.py` | Ekstraktor data go4WorldBusiness. | Mencari profil eksportir dan importir aktif di wilayah Bandung. |
 | | `BoL_scraper.py` | Pengambil data *Bill of Lading*. | Validasi arus barang fisik melalui dokumen pengapalan global. |
@@ -168,8 +169,7 @@ Proyek ini akan terus berkembang:
 | | `idx.py` | Pengelola entri data dan indeks. | Manajemen alur kerja dan pemetaan target sebelum ekstraksi. |
 | | `cek_data_bol.py` | Pengecek integritas manifest. | Memastikan data *Bill of Lading* valid dan bebas duplikasi. |
 | | `reverse_dork.py` | Mesin optimasi pencarian. | Menghasilkan parameter Google Dork yang presisi untuk meminimalkan *noise*. |
-| ***Debugging*** | `llama_debug.py` | Lab pengujian Llama. | Menguji instruksi *prompt* dan format JSON tanpa *scraper* penuh. |
-| | `news_debug.py` | Lab pengujian *parser* teks. | Menguji ketepatan ekstraksi (Ad-Killer) pada portal berita tertentu. |
+| ***Debugging*** | `bmei_debug.py` | Lab pengujian bmei_scraper.py. | Menguji instruksi *prompt* dan fungsi mesin tanpa *scraper* penuh. |
 
 > [!TIP]
 > Jalankan script `auth_setup.py` terlebih dahulu untuk memastikan *session* yang stabil dan berkelanjutan sebelum menjalankan *scraping tasks* berdurasi panjang.
@@ -228,33 +228,27 @@ playwright install msedge
 
 Pastikan model AI lokal sudah siap
 ```bash
-ollama create bps-auditor -f Modelfile
+ollama create bmei-auditor -f modelfile_bmei
+ollama create bps-lnprt -f modelfile_lnprt
+ollama create bps-naker -f modelfile_naker
 ```
 
 -----
 
 ##  Cara Penggunaan (Eksekusi)
 
-### A. Menjalankan Investigasi Berita Historis
+### A. Menjalankan Audit Historis Fenomena-fenomena
 
 Gunakan parameter rentang waktu untuk menarik data fenomena perdagangan di masa lalu:
 
 ```bash
-python src/llama_scraper.py --mode history --start YYYY-MM-DD --end YYYY-MM-DD
+python src/nama_scraper.py --mode history --start YYYY-MM-DD --end YYYY-MM-DD
 ```
 
-### B. Menjalankan Radar Lembaga Non-Profit (LNPRT)
-
-Sama seperti investigasi berita, namun dengan kamus kata kunci khusus lembaga sosial:
+### B. Monitoring Akun Instagram Spesifik
 
 ```bash
-python src/lnprt_scraper.py --mode history --start YYYY-MM-DD --end YYYY-MM-DD
-```
-
-### C. Monitoring Akun Instagram Spesifik
-
-```bash
-python src/instagram_scraper.py --target nama_akun_asosiasi
+python src/instagram_scraper.py --target username_akun
 ```
 
 -----
