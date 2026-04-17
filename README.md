@@ -228,33 +228,34 @@ playwright install msedge
 
 Pastikan model AI lokal sudah siap
 ```bash
-ollama create bps-auditor -f Modelfile
+ollama create bmei-auditor -f modelfile_bmei
+ollama create bps-naker -f modelfile_naker
+ollama create bps-lnprt -f modelfile_lnprt
 ```
 
 -----
 
 ##  Cara Penggunaan (Eksekusi)
 
-### A. Menjalankan Investigasi Berita Historis
+### A. Menjalankan Audit Berita Historis (bmei_scraper.py, lnprt_scraper.py, naker_scraper.py)
 
-Gunakan parameter rentang waktu untuk menarik data fenomena perdagangan di masa lalu:
+Gunakan parameter rentang waktu untuk menarik data fenomena di masa lalu, contoh:
 
 ```bash
-python src/llama_scraper.py --mode history --start YYYY-MM-DD --end YYYY-MM-DD
+python src/nama_scraper.py --mode history --start YYYY-MM-DD --end YYYY-MM-DD
 ```
 
-### B. Menjalankan Radar Lembaga Non-Profit (LNPRT)
-
-Sama seperti investigasi berita, namun dengan kamus kata kunci khusus lembaga sosial:
+ganti nama_scraper.py dengan: bmei_scraper.py / lnprt_scraper.py / naker_scraper.py
+ganti juga YYYY-MM-DD dengan rentang waktu yang diinginkan. contoh:
 
 ```bash
-python src/lnprt_scraper.py --mode history --start YYYY-MM-DD --end YYYY-MM-DD
+python src/bmei_scraper.py --mode history --start 2026-01-01 --end 2026-01-30
 ```
 
-### C. Monitoring Akun Instagram Spesifik
+### B. Monitoring Akun Instagram Spesifik
 
 ```bash
-python src/instagram_scraper.py --target nama_akun_asosiasi
+python src/instagram_scraper.py --target username_akun
 ```
 
 -----
