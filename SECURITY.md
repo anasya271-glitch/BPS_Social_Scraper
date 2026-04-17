@@ -1,16 +1,18 @@
-# Kebijakan Keamanan / *Security Policy* 🛡️
+# Kebijakan Keamanan (*Security Policy*)
 
 ## *Supported Versions*
 Kami menerapkan pembaruan keamanan secara proaktif. Saat ini, dukungan patch keamanan hanya diberikan untuk cabang utama (*main branch*) dan versi mayor terakhir.
 
-| Version | Supported          |
+| *Version* | *Supported*          |
 | ------- | ------------------ |
 | v1.0.x  | :white_check_mark: |
 | < v1.0  | :x:                |
 
-## Protokol Pelaporan *(Vulnerability Disclosure Protocol)*
+----
 
-**[ID]** Integritas data Badan Pusat Statistik (BPS) adalah prioritas absolut kami. Jika Anda menemukan kerentanan keamanan (vulnerability) pada repositori ini, **MOHON JANGAN** membuat laporan publik di tab `Issues`. 
+## Protokol Pelaporan (*Vulnerability Disclosure Protocol*)
+
+**[ID]** Integritas data Badan Pusat Statistik (BPS) Kota Bandung adalah prioritas absolut kami. Jika Anda menemukan kerentanan keamanan (*vulnerability*) pada repositori ini, **MOHON JANGAN** membuat laporan publik di tab `Issues`. 
 
 Silakan gunakan fitur ***Private Vulnerability Reporting*** di GitHub, atau hubungi pengelola infrastruktur secara langsung melalui email ke: `anasya@upi.edu`. Kami memegang komitmen *Service Level Agreement* (SLA) untuk merespons laporan awal dalam kurun waktu 48 jam.
 
