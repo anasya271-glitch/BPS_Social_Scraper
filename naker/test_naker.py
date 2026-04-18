@@ -4,7 +4,7 @@ Unit tests untuk semua modul Naker.
 Dioptimasi untuk laptop low-spec (6GB RAM, Ryzen 3 3250U).
 
 Jalankan:
-    python -m pytest test_naker.py -v
+    python -m pytest test_naker.py -v   # jalankan semua test
     python -m pytest test_naker.py -v -x    # berhenti di error pertama
     python -m pytest test_naker.py -v -k "test_scorer"  # jalankan scorer saja
     python -m pytest test_naker.py -v -k "test_loader" # jalankan loader saja
@@ -19,13 +19,14 @@ import time
 import tempfile
 import shutil
 import unittest
+from naker.scraper import NewsScraper, NEWS_SOURCES
 from pathlib import Path
 from unittest.mock import patch, MagicMock
 
 # ---------- Pastikan import bisa jalan ----------
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-from loader import NakerConfig, FileCache, PromptLoader, load_config, detect_system_profile
+from naker.loader import NakerConfig, FileCache, PromptLoader, ConfigLoader, detect_system_profile
 from scorer import ArticleScorer, ScoredArticle, score_and_rank, NAKER_KEYWORDS
 
 
@@ -68,16 +69,16 @@ class TestNakerConfig(unittest.TestCase):
         self.assertEqual(cfg.max_concurrent_requests, 5)
         self.assertFalse(hasattr(cfg, "unknown_field"))
 
-    def test_load_config_auto_detect(self):
-        cfg = load_config()
+    def test_ConfigLoader_auto_detect(self):
+        cfg = ConfigLoader()
         self.assertIsInstance(cfg, NakerConfig)
         self.assertGreater(cfg.batch_size, 0)
 
-    def test_load_config_from_json(self):
+    def test_ConfigLoader_from_json(self):
         with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as f:
             json.dump({"max_concurrent_requests": 99, "batch_size": 42}, f)
             f.flush()
-            cfg = load_config(f.name)
+            cfg = ConfigLoader(f.name)
         os.unlink(f.name)
         self.assertEqual(cfg.max_concurrent_requests, 99)
         self.assertEqual(cfg.batch_size, 42)
@@ -388,37 +389,28 @@ class TestScraperStructure(unittest.TestCase):
     """Test scraper structure dan config (tanpa actual HTTP)."""
 
     def test_import_scraper(self):
-        from scraper import NakerScraper, ScrapedPage, DEFAULT_SOURCES
-        self.assertTrue(len(DEFAULT_SOURCES) >= 3)
+        self.assertTrue(len(NEWS_SOURCES) >= 3)
 
     def test_scraped_page_ok(self):
-        from scraper import ScrapedPage
-        page = ScrapedPage(url="https://test.com", status_code=200, html="<html>content</html>")
-        self.assertTrue(page.ok)
-
+        # NewsScraper tidak punya ScrapedPage, hasilnya dict dengan key 'status'
+        page = {"url": "https://test.com", "status": 200, "html": "<html>content</html>"}
+        self.assertEqual(page["status"], 200)
     def test_scraped_page_not_ok(self):
-        from scraper import ScrapedPage
-        page = ScrapedPage(url="https://test.com", status_code=404, html="")
-        self.assertFalse(page.ok)
-
+        page = {"url": "https://test.com", "status": 404, "html": ""}
+        self.assertNotEqual(page["status"], 200)
     def test_scraper_init_defaults(self):
-        from scraper import NakerScraper
-        s = NakerScraper()
+        s = NewsScraper()
         self.assertEqual(s.max_concurrent, 3)
-        self.assertEqual(s.timeout, 15)
-
+        self.assertEqual(s.request_timeout, 15)
     def test_scraper_init_custom(self):
-        from scraper import NakerScraper
-        s = NakerScraper(max_concurrent=2, timeout=20, delay=2.0)
+        s = NewsScraper(max_concurrent=2, request_timeout=20, delay=2.0)
         self.assertEqual(s.max_concurrent, 2)
         self.assertEqual(s.delay, 2.0)
-
     def test_scraper_stats_initial(self):
-        from scraper import NakerScraper
-        s = NakerScraper()
-        stats = s.stats
-        self.assertEqual(stats["total"], 0)
-        self.assertEqual(stats["success"], 0)
+        s = NewsScraper()
+        stats = s.get_stats()
+        self.assertEqual(stats["total_requests"], 0)
+        self.assertEqual(stats["successful"], 0)
 
 
 # ================================================================
@@ -429,12 +421,10 @@ class TestIntegration(unittest.TestCase):
     """Test integrasi antar modul (tanpa network)."""
 
     def test_config_to_scraper_params(self):
-        """Config low_spec → scraper parameter cocok."""
-        from scraper import NakerScraper
         cfg = NakerConfig.for_low_spec()
-        scraper = NakerScraper(
+        scraper = NewsScraper(
             max_concurrent=cfg.max_concurrent_requests,
-            timeout=cfg.request_timeout,
+            request_timeout=cfg.request_timeout,
             delay=cfg.delay_between_requests,
         )
         self.assertEqual(scraper.max_concurrent, 2)

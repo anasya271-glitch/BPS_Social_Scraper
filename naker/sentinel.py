@@ -13,7 +13,7 @@ from typing import Dict, Any, Optional, List
 from pathlib import Path
 from collections import Counter
 
-from bandung_scraper import BandungScraper, SEARCH_QUERIES
+from naker.bandung_scraper import EuphemismMatch, SEARCH_QUERIES
 from parser import extract_article_content, parse_date_robust
 from scorer import RelevanceScorer
 from manager import ArticleManager
