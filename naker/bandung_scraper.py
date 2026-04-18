@@ -1,0 +1,906 @@
+#!/usr/bin/env python3
+# bandung_scraper.py
+"""
+Bandung Employment & Socioeconomic Phenomena Scraper + Analyzer
+===============================================================
+Mencakup:
+- Klasifikasi sektor (KBLI 2020, 17 sektor)
+- Deteksi euphemisme (PHK, pengangguran, kemiskinan, bencana, korupsi, dll.)
+- Impact keywords (positif/negatif ketenagakerjaan)
+- Regional data (30 kecamatan, 151 kelurahan Kota Bandung)
+- Scoring & relevance engine
+[BUG FIXES APPLIED]
+- Safe regex pre-compilation at module load (not per-call)
+- preprocess_text handles None/non-string input
+- detect_euphemisms dedup edge case fixed
+- summarize_euphemisms defaultdict properly serializable
+- score_article handles empty/None text
+- Graceful skip for invalid regex patterns
+"""
+import re
+import logging
+from collections import defaultdict
+from dataclasses import dataclass, field
+from typing import List, Dict, Tuple, Optional
+logger = logging.getLogger("naker.bandung_scraper")
+# [BUG FIX] Safe regex compilation — logs warning and returns None on failure
+def _safe_compile(pattern: str, flags: int = re.IGNORECASE) -> Optional[re.Pattern]:
+    """Compile regex safely; returns None if pattern is invalid."""
+    try:
+        return re.compile(pattern, flags)
+    except re.error as e:
+        logger.warning(f"Invalid regex pattern skipped: '{pattern}' — {e}")
+        return None
+    
+# ===========================================================================
+# 1. EUPHEMISM DETECTION ENGINE — KATEGORI A–I
+# ===========================================================================
+EUPHEMISM_MAP = {
+
+    # --- A. PHK & PEMUTUSAN HUBUNGAN KERJA ---
+    "phk": {
+        "label": "PHK / Pemutusan Hubungan Kerja",
+        "severity": "high",
+        "keywords": [
+            # Formal / resmi
+            "pemutusan hubungan kerja",
+            "phk",
+            "phk massal",
+            "rasionalisasi karyawan",
+            "rasionalisasi pegawai",
+            "rasionalisasi tenaga kerja",
+            "restrukturisasi organisasi",
+            "restrukturisasi perusahaan",
+            "perampingan organisasi",
+            "perampingan struktur",
+            "efisiensi karyawan",
+            "efisiensi tenaga kerja",
+            "efisiensi pegawai",
+            "efisiensi sdm",
+            "efisiensi sumber daya manusia",
+            "optimalisasi sdm",
+            "optimalisasi organisasi",
+            "penyesuaian organisasi",
+            "penyesuaian jumlah karyawan",
+            "penyesuaian tenaga kerja",
+            "pengurangan karyawan",
+            "pengurangan pegawai",
+            "pengurangan tenaga kerja",
+            "pengurangan jumlah pekerja",
+            "pelepasan karyawan",
+            "pelepasan tenaga kerja",
+            "pemberhentian karyawan",
+            "pemberhentian pegawai",
+            "pemberhentian sepihak",
+            "pemberhentian sementara",
+            "pemangkasan karyawan",
+            "pemangkasan pegawai",
+            "pemangkasan sdm",
+            "merumahkan karyawan",
+            "merumahkan pekerja",
+            "dirumahkan",
+            "karyawan dirumahkan",
+            "pekerja dirumahkan",
+            "tidak diperpanjang kontrak",
+            "kontrak tidak diperpanjang",
+            "kontrak berakhir",
+            "kontrak habis",
+            "masa kontrak habis",
+            "putus kontrak",
+            "tidak diperpanjang",
+            "pensiun dini",
+            "pensiun dipercepat",
+            "program pensiun dini",
+            "golden handshake",
+            "pesangon",
+            "uang pesangon",
+            "paket kompensasi",
+            "program voluntary separation",
+            "voluntary separation program",
+            "vsp",
+            "mutual separation",
+            "pemutusan secara baik-baik",
+            "perpisahan secara kekeluargaan",
+            "mengundurkan diri",
+            "resign massal",
+            # Informal / media
+            "di-phk",
+            "kena phk",
+            "terkena phk",
+            "korban phk",
+            "gelombang phk",
+            "tsunami phk",
+            "badai phk",
+            "dipecat",
+            "dikeluarkan",
+            "dilepas",
+            "dibuang perusahaan",
+            "kehilangan pekerjaan",
+            "kehilangan mata pencaharian",
+            "tidak bekerja lagi",
+            "pabrik tutup",
+            "perusahaan tutup",
+            "gulung tikar",
+            "bangkrut",
+            "pailit",
+            "pkpu",
+            "suspensi operasional",
+            "menghentikan operasional",
+            "menghentikan produksi",
+            "produksi berhenti",
+            "operasional dihentikan",
+            "lock out",
+            "lockout",
+            # Konteks Bandung — industri tekstil/garmen
+            "pabrik tekstil tutup",
+            "pabrik garmen tutup",
+            "buruh pabrik dirumahkan",
+            "buruh tekstil di-phk",
+            "pekerja garmen dirumahkan",
+            "industri tekstil lesu",
+            "industri garmen terpuruk",
+            "pabrik di majalaya tutup",
+            "pabrik di cigondewah tutup",
+            "sektor tekstil bandung",
+        ],
+        "patterns": [
+            r"(?:mem|di)?\bphk\b",
+            r"(?:di|mem)rumahkan\s+\d*\s*(?:ribu\s+)?(?:karyawan|pekerja|buruh|pegawai)",
+            r"(?:ribuan|ratusan|puluhan|belasan)\s+(?:karyawan|pekerja|buruh)\s+(?:di-?phk|dirumahkan|dipecat|diberhentikan)",
+            r"(?:pabrik|perusahaan|toko|gerai)\s+(?:tutup|gulung\s*tikar|bangkrut|berhenti\s+beroperasi)",
+            r"kontrak\s+(?:tidak|tak|tdk)\s+(?:di)?perpanjang",
+            r"(?:gelombang|tsunami|badai|ancaman)\s+phk",
+        ],
+    },
+
+    # --- B. PENGANGGURAN & KEHILANGAN PEKERJAAN ---
+    "pengangguran": {
+        "label": "Pengangguran / Jobless",
+        "severity": "high",
+        "keywords": [
+            "pengangguran",
+            "pengangguran terbuka",
+            "tingkat pengangguran terbuka",
+            "tpt",
+            "pengangguran terselubung",
+            "pengangguran friksional",
+            "pengangguran struktural",
+            "pengangguran musiman",
+            "pengangguran siklikal",
+            "angka pengangguran",
+            "pengangguran meningkat",
+            "pengangguran bertambah",
+            "pengangguran membengkak",
+            "nganggur",
+            "menganggur",
+            "belum bekerja",
+            "belum mendapat pekerjaan",
+            "sedang mencari kerja",
+            "pencari kerja",
+            "sulit mendapat pekerjaan",
+            "sulit cari kerja",
+            "susah cari kerja",
+            "lapangan kerja sempit",
+            "lapangan kerja terbatas",
+            "lapangan kerja minim",
+            "minimnya lapangan kerja",
+            "kurangnya lapangan pekerjaan",
+            "tidak ada lowongan",
+            "lowongan minim",
+            "jobless",
+            "job seeker",
+            "angkatan kerja menganggur",
+            "neet",
+            "pemuda menganggur",
+            "lulusan menganggur",
+            "sarjana menganggur",
+            "sarjana nganggur",
+            "fresh graduate menganggur",
+            "bonus demografi",
+            "beban demografi",
+            "setengah menganggur",
+            "setengah pengangguran",
+            "underemployment",
+            "jam kerja kurang",
+            "jam kerja rendah",
+            "pekerja paruh waktu terpaksa",
+            # Konteks Bandung
+            "pengangguran di bandung",
+            "angka pengangguran bandung",
+            "tpt bandung",
+            "tpt kota bandung",
+            "pencari kerja bandung",
+            "lulusan bandung menganggur",
+        ],
+        "patterns": [
+            r"(?:angka|tingkat|rate|jumlah)\s+pengangguran\s+(?:naik|meningkat|bertambah|membengkak|melonjak|tinggi)",
+            r"(?:sulit|susah|sukar)\s+(?:mendapat|mencari|cari|dapat)\s+(?:pekerjaan|kerja|kerjaan)",
+            r"(?:ribuan|ratusan|jutaan)\s+(?:orang|warga|penduduk)\s+menganggur",
+            r"pengangguran\s+(?:di\s+)?(?:kota\s+)?bandung",
+        ],
+    },
+
+    # --- C. KEMISKINAN & KESENJANGAN ---
+    "kemiskinan": {
+        "label": "Kemiskinan / Kesenjangan Ekonomi",
+        "severity": "high",
+        "keywords": [
+            # Formal
+            "kemiskinan",
+            "angka kemiskinan",
+            "garis kemiskinan",
+            "penduduk miskin",
+            "warga miskin",
+            "masyarakat miskin",
+            "keluarga miskin",
+            "rumah tangga miskin",
+            "masyarakat kurang mampu",
+            "masyarakat prasejahtera",
+            "prasejahtera",
+            "keluarga prasejahtera",
+            "penerima bantuan sosial",
+            "penerima bansos",
+            "dtks",
+            "data terpadu kesejahteraan sosial",
+            "keluarga penerima manfaat",
+            "kpm",
+            "masyarakat berpenghasilan rendah",
+            "mbr",
+            "kelompok rentan",
+            "rentan miskin",
+            "hampir miskin",
+            "near poor",
+            "miskin ekstrem",
+            "kemiskinan ekstrem",
+            "kemiskinan absolut",
+            "kemiskinan relatif",
+            "ketimpangan",
+            "kesenjangan",
+            "kesenjangan ekonomi",
+            "kesenjangan sosial",
+            "gini ratio",
+            "rasio gini",
+            "koefisien gini",
+            "ketimpangan pendapatan",
+            "ketimpangan pengeluaran",
+            # Informal / media
+            "warga tidak mampu",
+            "warga kurang beruntung",
+            "hidup di bawah garis kemiskinan",
+            "hidup pas-pasan",
+            "ekonomi pas-pasan",
+            "hidup serba kekurangan",
+            "kesulitan ekonomi",
+            "kesulitan finansial",
+            "terpuruk secara ekonomi",
+            "ekonomi terpuruk",
+            "daya beli menurun",
+            "daya beli melemah",
+            "daya beli rendah",
+            "daya beli turun",
+            "kemampuan beli menurun",
+            "deflasi konsumsi",
+            "konsumsi menurun",
+            "pengeluaran menurun",
+            "sulit memenuhi kebutuhan",
+            "kebutuhan pokok mahal",
+            "harga kebutuhan naik",
+            "beban hidup berat",
+            "beban ekonomi berat",
+            "ekonomi sulit",
+            "krisis ekonomi",
+            # Konteks Bandung
+            "kemiskinan bandung",
+            "warga miskin bandung",
+            "bantuan sosial bandung",
+            "bansos bandung",
+            "dtks bandung",
+            "mbr bandung",
+        ],
+        "patterns": [
+            r"(?:angka|tingkat|jumlah|persentase)\s+kemiskinan\s+(?:naik|meningkat|bertambah|tinggi|melonjak)",
+            r"(?:warga|penduduk|masyarakat|keluarga)\s+(?:miskin|prasejahtera|kurang\s+mampu|tidak\s+mampu)",
+            r"daya\s+beli\s+(?:menurun|melemah|turun|rendah|anjlok|merosot)",
+            r"(?:kesenjangan|ketimpangan)\s+(?:ekonomi|sosial|pendapatan)",
+        ],
+    },
+
+    # --- D. PENURUNAN EKONOMI / RESESI ---
+    "penurunan_ekonomi": {
+        "label": "Penurunan Ekonomi / Resesi",
+        "severity": "medium",
+        "keywords": [
+            # Formal
+            "penurunan ekonomi", "perlambatan ekonomi", "pelambatan ekonomi",
+            "kontraksi ekonomi", "resesi", "resesi ekonomi", "resesi teknikal",
+            "pertumbuhan negatif", "pertumbuhan ekonomi negatif",
+            "pertumbuhan ekonomi melambat", "pertumbuhan ekonomi menurun",
+            "pertumbuhan ekonomi melemah", "pdb menurun", "pdb negatif",
+            "produk domestik bruto menurun", "deflasi", "stagflasi",
+            "krisis ekonomi", "krisis moneter", "krisis keuangan",
+            "krisis likuiditas", "krisis fiskal",
+            "penurunan investasi", "investasi menurun", "investasi lesu",
+            "investasi stagnan", "iklim investasi memburuk",
+            "penurunan omzet", "omzet menurun", "omzet anjlok", "omzet turun drastis",
+            "penurunan pendapatan", "pendapatan menurun", "pendapatan turun",
+            "pendapatan merosot", "revenue drop",
+            "penurunan penjualan", "penjualan menurun", "penjualan lesu",
+            "penurunan ekspor", "ekspor menurun", "ekspor turun",
+            "penurunan produksi", "produksi menurun", "produksi turun",
+            "utilisasi rendah", "utilisasi menurun", "kapasitas menganggur",
+            "overcapacity", "kelebihan kapasitas",
+            "neraca perdagangan defisit", "defisit perdagangan",
+            "defisit anggaran", "defisit fiskal",
+            "inflasi tinggi", "inflasi melonjak", "harga naik",
+            "harga melonjak", "harga melambung", "kenaikan harga",
+            "biaya hidup naik", "biaya hidup tinggi", "biaya hidup mahal",
+            # Informal / media
+            "ekonomi lesu", "ekonomi seret", "ekonomi melemah",
+            "ekonomi terpuruk", "ekonomi megap-megap", "ekonomi morat-marit",
+            "ekonomi carut-marut", "ekonomi amburadul",
+            "usaha sepi", "dagangan sepi", "pasar sepi", "mall sepi",
+            "toko sepi", "sepi pembeli", "sepi pengunjung",
+            "bisnis lesu", "bisnis stagnan", "bisnis sulit",
+            "usaha bangkrut", "usaha tutup", "umkm tutup",
+            "umkm bangkrut", "umkm terpuruk", "umkm kesulitan",
+            "pedagang mengeluh", "pedagang merugi", "pedagang gulung tikar",
+            # Konteks Bandung
+            "ekonomi bandung lesu", "umkm bandung terpuruk",
+            "pasar baru sepi", "pasar andir sepi", "pasar kosambi sepi",
+            "wisata bandung sepi", "hotel bandung sepi",
+            "pusat perbelanjaan bandung sepi", "factory outlet sepi",
+            "pad bandung menurun", "pendapatan asli daerah bandung turun",
+        ],
+        "patterns": [
+            r"(?:ekonomi|bisnis|usaha|perdagangan)\s+(?:lesu|seret|melemah|terpuruk|stagnan|anjlok)",
+            r"(?:omzet|penjualan|pendapatan|ekspor|produksi)\s+(?:turun|menurun|anjlok|merosot|melemah)\s+(?:\d+\s*%|\d+\s*persen)",
+            r"(?:inflasi|harga)\s+(?:naik|melonjak|melambung|tinggi)\s+(?:\d+\s*%|\d+\s*persen)?",
+            r"pertumbuhan\s+(?:ekonomi\s+)?(?:negatif|minus|melambat|menurun|melemah)",
+        ],
+    },
+
+    # --- E. SEKTOR INFORMAL & KERENTANAN KERJA ---
+    "sektor_informal": {
+        "label": "Sektor Informal / Kerentanan Kerja",
+        "severity": "medium",
+        "keywords": [
+            # Formal
+            "sektor informal", "pekerja informal", "tenaga kerja informal",
+            "pekerja tidak tetap", "pekerja lepas", "pekerja harian lepas",
+            "pekerja kontrak", "pekerja outsourcing", "pekerja alih daya",
+            "tenaga kerja alih daya", "buruh harian", "buruh lepas",
+            "buruh serabutan", "pekerja serabutan", "kerja serabutan",
+            "pekerja gig", "gig economy", "gig worker",
+            "pekerja platform", "driver online", "ojol",
+            "ojek online", "kurir online", "mitra platform",
+            "pekerja tanpa jaminan", "tanpa jaminan sosial",
+            "tanpa bpjs", "tidak terdaftar bpjs",
+            "tanpa kontrak kerja", "tanpa perjanjian kerja",
+            "pekerja rentan", "pekerjaan rentan", "kerentanan kerja",
+            "precarious work", "precariat",
+            "upah rendah", "upah murah", "upah di bawah umr",
+            "upah di bawah umk", "upah tidak layak", "gaji tidak layak",
+            "upah minimum", "umr", "umk", "ump",
+            "upah lembur tidak dibayar", "upah telat",
+            "upah belum dibayar", "gaji belum dibayar",
+            "eksploitasi pekerja", "eksploitasi buruh",
+            "pekerja anak", "tenaga kerja anak",
+            "pedagang kaki lima", "pkl", "pedagang asongan",
+            "pedagang keliling", "tukang ojek", "tukang becak",
+            "pemulung", "pengamen", "pengemis",
+            "usaha mikro", "usaha kecil", "usaha rumahan",
+            "home industry", "industri rumah tangga",
+            "ekonomi kreatif informal",
+            # Informal
+            "kerja apa aja", "kerja asal ada", "makan gaji buta",
+            "kerja keras tapi miskin", "working poor",
+            "hidup dari hari ke hari", "nombok terus",
+            # Konteks Bandung
+            "pkl bandung", "pkl di jalan", "pkl di trotoar",
+            "pedagang kaki lima bandung", "pedagang cibadak",
+            "ojol bandung", "driver grab bandung", "driver gojek bandung",
+            "buruh serabutan bandung", "pekerja informal bandung",
+        ],
+        "patterns": [
+            r"(?:pekerja|buruh|tenaga\s+kerja)\s+(?:informal|lepas|harian|serabutan|kontrak|outsourcing)",
+            r"(?:tanpa|tidak\s+ada|belum\s+punya)\s+(?:jaminan\s+sosial|bpjs|kontrak\s+kerja|perjanjian\s+kerja)",
+            r"upah\s+(?:di\s+bawah|kurang\s+dari|belum\s+sesuai)\s+(?:umr|umk|ump|standar|ketentuan)",
+            r"(?:pkl|pedagang\s+kaki\s+lima)\s+(?:ditertibkan|digusur|direlokasi|ditata)",
+        ],
+    },
+
+    # --- F. KORUPSI & PENYALAHGUNAAN ANGGARAN ---
+    "korupsi": {
+        "label": "Korupsi / Penyalahgunaan Anggaran",
+        "severity": "medium",
+        "keywords": [
+            # Formal
+            "korupsi", "tindak pidana korupsi", "tipikor",
+            "penyalahgunaan anggaran", "penyalahgunaan wewenang",
+            "penyalahgunaan jabatan", "penyimpangan anggaran",
+            "penyelewengan anggaran", "penyelewengan dana",
+            "penyelewengan keuangan", "mark up", "markup anggaran",
+            "mark up proyek", "penggelembungan anggaran",
+            "penggelembungan dana", "penyunatan anggaran",
+            "pemotongan anggaran tidak sah",
+            "gratifikasi", "suap", "penyuapan", "sogok", "menyogok",
+            "uang pelicin", "uang ketok", "uang tanda terima kasih",
+            "fee proyek", "kickback", "komisi gelap",
+            "pencucian uang", "money laundering",
+            "pengadaan fiktif", "proyek fiktif", "proyek siluman",
+            "tender tertutup", "tender arisan",
+            "kolusi", "nepotisme", "kkn",
+            "konflik kepentingan", "conflict of interest",
+            "pungutan liar", "pungli", "pungutan tidak resmi",
+            "pemerasan", "penggelapan", "penggelapan dana",
+            "maladministrasi", "malaadministrasi",
+            "kerugian negara", "kerugian daerah", "kerugian keuangan negara",
+            "temuan bpk", "temuan audit", "opini disclaimer",
+            "opini tidak wajar", "opini tdp",
+            # Informal
+            "duit haram", "uang haram", "uang rakyat dikorupsi",
+            "bancakan proyek", "bagi-bagi proyek", "proyek pesanan",
+            "anggaran bocor", "kebocoran anggaran",
+            "koruptor", "tersangka korupsi", "terdakwa korupsi",
+            "ott", "operasi tangkap tangan", "ditangkap kpk",
+            "dijerat kpk", "kasus korupsi",
+            # Konteks Bandung
+            "korupsi bandung", "korupsi pemkot bandung",
+            "korupsi apbd bandung", "pungli bandung",
+            "kasus korupsi bandung", "anggaran bandung bocor",
+        ],
+        "patterns": [
+            r"(?:kasus|dugaan|indikasi|perkara)\s+(?:korupsi|tipikor|suap|gratifikasi|penggelapan)",
+            r"(?:kerugian\s+(?:negara|daerah|keuangan))\s+(?:sebesar|mencapai|senilai)\s+(?:rp|IDR)",
+            r"(?:ott|operasi\s+tangkap\s+tangan)\s+(?:kpk|kejaksaan|polisi)",
+            r"(?:penyalahgunaan|penyelewengan|penyimpangan)\s+(?:anggaran|dana|wewenang|jabatan)",
+        ],
+    },
+
+    # --- G. BENCANA & DAMPAK LINGKUNGAN ---
+    "bencana": {
+        "label": "Bencana Alam & Lingkungan",
+        "severity": "medium",
+        "keywords": [
+            "bencana alam", "bencana", "banjir", "banjir bandang",
+            "banjir rob", "genangan", "genangan air",
+            "tanah longsor", "longsor", "pergerakan tanah",
+            "gempa bumi", "gempa", "gempa tektonik",
+            "kebakaran", "kebakaran hutan", "kebakaran lahan",
+            "kekeringan", "kemarau panjang", "krisis air",
+            "kekurangan air bersih", "air bersih langka",
+            "pencemaran lingkungan", "polusi", "polusi udara",
+            "polusi air", "pencemaran air", "pencemaran sungai",
+            "pencemaran tanah", "limbah", "limbah industri",
+            "limbah pabrik", "limbah b3", "limbah beracun",
+            "sampah menumpuk", "sampah menggunung", "krisis sampah",
+            "tpa penuh", "tpa overload",
+            "cuaca ekstrem", "angin kencang", "angin puting beliung",
+            "hujan deras", "hujan lebat", "perubahan iklim",
+            "pemanasan global", "el nino", "la nina",
+            "rob", "abrasi", "erosi",
+            "pohon tumbang", "jalan amblas", "jalan rusak",
+            "infrastruktur rusak", "rumah rusak", "rumah roboh",
+            "pengungsi bencana", "korban bencana", "terdampak bencana",
+            "daerah rawan bencana", "zona merah bencana",
+            "darurat bencana", "tanggap darurat", "status darurat",
+            # Konteks Bandung
+            "banjir bandung", "banjir cicaheum", "banjir cibiru",
+            "banjir pagarsih", "banjir pasteur", "banjir dayeuhkolot",
+            "longsor bandung", "longsor lembang", "longsor punclut",
+            "polusi udara bandung", "kualitas udara bandung",
+            "ispu bandung", "sampah bandung", "tpa sarimukti",
+            "sungai cikapundung tercemar", "sungai citarum tercemar",
+            "kebakaran bandung", "kebakaran pasar bandung",
+        ],
+        "patterns": [
+            r"(?:banjir|longsor|gempa|kebakaran)\s+(?:di\s+)?(?:kota\s+)?bandung",
+            r"(?:korban|pengungsi|terdampak)\s+(?:banjir|longsor|gempa|bencana)\s+(?:mencapai|sebanyak|bertambah)\s+\d+",
+            r"(?:polusi|pencemaran|kualitas)\s+(?:udara|air|sungai)\s+(?:bandung|memburuk|berbahaya|tidak\s+sehat)",
+            r"(?:sampah|limbah)\s+(?:menumpuk|menggunung|meluap|mencemari)",
+        ],
+    },
+
+    # --- H. MASALAH KESEHATAN MASYARAKAT ---
+    "kesehatan": {
+        "label": "Masalah Kesehatan Masyarakat",
+        "severity": "medium",
+        "keywords": [
+            "wabah", "pandemi", "epidemi", "endemi",
+            "klb", "kejadian luar biasa", "outbreak",
+            "stunting", "gizi buruk", "malnutrisi", "kurang gizi",
+            "gizi kurang", "busung lapar", "kelaparan",
+            "rawan pangan", "krisis pangan", "ketahanan pangan rendah",
+            "kematian ibu", "kematian bayi", "kematian balita",
+            "angka kematian ibu", "aki", "angka kematian bayi", "akb",
+            "demam berdarah", "dbd", "tbc", "tuberkulosis",
+            "diare", "campak", "difteri", "polio",
+            "covid", "covid-19", "varian baru",
+            "penyakit menular", "penyakit tropis",
+            "fasilitas kesehatan kurang", "puskesmas minim",
+            "tenaga kesehatan kurang", "kekurangan dokter",
+            "bpjs kesehatan", "bpjs defisit", "iuran bpjs naik",
+            "obat langka", "obat mahal", "obat tidak tersedia",
+            "kesehatan jiwa", "gangguan mental", "depresi",
+            "bunuh diri", "percobaan bunuh diri",
+            # Konteks Bandung
+            "stunting bandung", "dbd bandung", "tbc bandung",
+            "rsud bandung", "puskesmas bandung",
+            "kesehatan masyarakat bandung",
+        ],
+        "patterns": [
+            r"(?:kasus|angka|jumlah)\s+(?:stunting|dbd|tbc|covid|diare|campak)\s+(?:naik|meningkat|melonjak|tinggi)",
+            r"(?:wabah|klb|outbreak)\s+(?:di\s+)?(?:kota\s+)?bandung",
+            r"(?:fasilitas|tenaga)\s+kesehatan\s+(?:kurang|minim|tidak\s+memadai|terbatas)",
+        ],
+    },
+
+    # --- I. KONFLIK INDUSTRIAL & BURUH ---
+    "konflik_buruh": {
+        "label": "Konflik Industrial / Buruh",
+        "severity": "medium",
+        "keywords": [
+            "mogok kerja", "mogok", "aksi mogok", "mogok massal",
+            "demo buruh", "demo pekerja", "demo karyawan",
+            "unjuk rasa buruh", "unjuk rasa pekerja",
+            "demonstrasi buruh", "protes buruh", "protes pekerja",
+            "aksi buruh", "aksi pekerja", "aksi massa buruh",
+            "serikat buruh", "serikat pekerja", "sp", "sb",
+            "federasi serikat pekerja", "konfederasi buruh",
+            "perselisihan hubungan industrial", "phi",
+            "perselisihan kerja", "sengketa kerja",
+            "pengadilan hubungan industrial",
+            "bipartit", "tripartit", "mediasi ketenagakerjaan",
+            "somasi", "gugatan buruh", "gugatan pekerja",
+            "hak normatif tidak dibayar", "hak normatif dilanggar",
+            "upah tidak dibayar", "thr tidak dibayar",
+            "thr telat", "thr dipotong",
+            "lembur tidak dibayar", "jamsostek tidak dibayar",
+            "pelanggaran ketenagakerjaan", "pelanggaran uu ketenagakerjaan",
+            "intimidasi buruh", "intimidasi pekerja",
+            "union busting", "anti serikat",
+            "pekerja migran", "tki", "tkw", "pmi",
+            "pekerja migran indonesia", "buruh migran",
+            # Konteks Bandung
+            "demo buruh bandung", "mogok kerja bandung",
+            "aksi buruh bandung", "serikat pekerja bandung",
+            "unjuk rasa buruh bandung", "konflik industrial bandung",
+        ],
+        "patterns": [
+            r"(?:ribuan|ratusan|puluhan)\s+(?:buruh|pekerja|karyawan)\s+(?:mogok|demo|unjuk\s+rasa|protes|turun\s+ke\s+jalan)",
+            r"(?:mogok|demo|unjuk\s+rasa|aksi)\s+(?:buruh|pekerja|karyawan)\s+(?:di\s+)?(?:kota\s+)?bandung",
+            r"(?:thr|upah|gaji|lembur|hak\s+normatif)\s+(?:tidak|belum|tak)\s+(?:dibayar|dibayarkan|diberikan)",
+            r"(?:pelanggaran|melanggar)\s+(?:uu|undang-undang)\s+(?:ketenagakerjaan|cipta\s+kerja|omnibus)",
+        ],
+    },
+}
+
+# ===========================================================================
+# 1b. PRE-COMPILE PATTERNS AT MODULE LOAD
+# ===========================================================================
+_COMPILED_PATTERNS: Dict[str, List[re.Pattern]] = {}
+def _compile_all_patterns():
+    """Pre-compile euphemism regex patterns. Called once at module load."""
+    for cat_key, cat_data in EUPHEMISM_MAP.items():
+        compiled = []
+        for pat_str in cat_data.get("patterns", []):
+            pat = _safe_compile(pat_str)
+            if pat is not None:
+                compiled.append(pat)
+        _COMPILED_PATTERNS[cat_key] = compiled
+
+# ===========================================================================
+# 2. EUPHEMISM DETECTION FUNCTIONS
+# ===========================================================================
+@dataclass
+class EuphemismMatch:
+    """Hasil deteksi euphemisme dalam teks."""
+    category: str
+    label: str
+    severity: str
+    matched_keyword: str
+    match_type: str          # "keyword" atau "pattern"
+    context_snippet: str
+    position: Tuple[int, int]
+def preprocess_text(text) -> str:
+    """
+    Normalisasi teks sebelum analisis.
+    [BUG FIX] Handle None, non-string input gracefully.
+    """
+    if text is None:
+        return ""
+    if not isinstance(text, str):
+        text = str(text)
+    text = text.lower()
+    text = re.sub(r'\s+', ' ', text)
+    text = text.replace('\u2013', '-').replace('\u2014', '-')
+    text = re.sub(r'[\u201c\u201d\u201e]', '"', text)
+    text = re.sub(r"[\u2018\u2019\u201a]", "'", text)
+    return text.strip()
+def extract_context(text: str, start: int, end: int, window: int = 80) -> str:
+    """Ambil potongan teks sekitar match untuk konteks."""
+    ctx_start = max(0, start - window)
+    ctx_end = min(len(text), end + window)
+    snippet = text[ctx_start:ctx_end].strip()
+    if ctx_start > 0:
+        snippet = "..." + snippet
+    if ctx_end < len(text):
+        snippet = snippet + "..."
+    return snippet
+def detect_euphemisms(text) -> List[EuphemismMatch]:
+    """
+    Deteksi seluruh euphemisme dalam teks.
+    [BUG FIX] Uses pre-compiled patterns from _COMPILED_PATTERNS.
+    [BUG FIX] Handles None/empty text input.
+    [BUG FIX] Dedup overlap logic guards against empty list.
+    """
+    if not text:
+        return []
+    normalized = preprocess_text(text)
+    if not normalized:
+        return []
+    matches = []
+    for cat_key, cat_data in EUPHEMISM_MAP.items():
+        # --- Keyword matching ---
+        for kw in cat_data.get("keywords", []):
+            kw_lower = kw.lower()
+            idx = 0
+            while True:
+                pos = normalized.find(kw_lower, idx)
+                if pos == -1:
+                    break
+                # Word boundary check
+                before_ok = (pos == 0) or not normalized[pos - 1].isalnum()
+                after_pos = pos + len(kw_lower)
+                after_ok = (after_pos >= len(normalized)) or not normalized[after_pos].isalnum()
+                if before_ok and after_ok:
+                    matches.append(EuphemismMatch(
+                        category=cat_key,
+                        label=cat_data["label"],
+                        severity=cat_data["severity"],
+                        matched_keyword=kw,
+                        match_type="keyword",
+                        context_snippet=extract_context(normalized, pos, after_pos),
+                        position=(pos, after_pos),
+                    ))
+                idx = pos + 1
+        # --- Pattern matching (pre-compiled) ---
+        # [BUG FIX] Use pre-compiled patterns instead of re-compiling each call
+        for compiled_pat in _COMPILED_PATTERNS.get(cat_key, []):
+            try:
+                for m in compiled_pat.finditer(normalized):
+                    matches.append(EuphemismMatch(
+                        category=cat_key,
+                        label=cat_data["label"],
+                        severity=cat_data["severity"],
+                        matched_keyword=m.group(),
+                        match_type="pattern",
+                        context_snippet=extract_context(normalized, m.start(), m.end()),
+                        position=(m.start(), m.end()),
+                    ))
+            except Exception as e:
+                # [BUG FIX] Catch any runtime regex error gracefully
+                logger.warning(f"Regex match error in category '{cat_key}': {e}")
+                continue
+    # --- Dedup overlapping matches ---
+    matches.sort(key=lambda x: (x.position[0], -(x.position[1] - x.position[0])))
+    deduped = []
+    last_end = -1
+    for m in matches:
+        if m.position[0] >= last_end:
+            deduped.append(m)
+            last_end = m.position[1]
+        # [BUG FIX] Guard against empty deduped list before accessing [-1]
+        elif deduped and (m.position[1] - m.position[0]) > (deduped[-1].position[1] - deduped[-1].position[0]):
+            deduped[-1] = m
+            last_end = m.position[1]
+    return deduped
+def summarize_euphemisms(matches: List[EuphemismMatch]) -> Dict:
+    """
+    Rangkum hasil deteksi euphemisme.
+    [BUG FIX] Use regular dict instead of defaultdict with lambda
+    so result is JSON-serializable without extra conversion.
+    """
+    summary = {
+        "total_matches": len(matches),
+        "by_category": {},
+        "high_severity_count": 0,
+        "categories_detected": [],
+    }
+    categories_seen = set()
+    for m in matches:
+        categories_seen.add(m.category)
+        if m.category not in summary["by_category"]:
+            summary["by_category"][m.category] = {
+                "count": 0,
+                "severity": m.severity,
+                "keywords_found": [],
+            }
+        cat = summary["by_category"][m.category]
+        cat["count"] += 1
+        cat["keywords_found"].append(m.matched_keyword)
+        if m.severity == "high":
+            summary["high_severity_count"] += 1
+    summary["categories_detected"] = sorted(categories_seen)
+    return summary
+
+
+# ===========================================================================
+# 3. SECTOR KEYWORDS (KBLI 2020 — 17 SEKTOR)
+# ===========================================================================
+
+SECTOR_KEYWORDS = {
+    "A_pertanian": ["pertanian", "perkebunan", "peternakan", "perikanan", "agribisnis", "pangan", "hortikultura", "agribisnis", "pangan", "padi", "sawah", "petani", "nelayan", "peternak", "ikan", "udang", "rumput laut", "kopi", "teh", "kakao", "karet", "sawit", "buah", "buah-buahan", "sayur", "sayuran"],
+    "B_pertambangan": ["pertambangan", "tambang", "mineral", "galian", "batubara", "emas", "perak", "tembaga", "nikel", "timah", "batu bara", "minyak bumi", "gas bumi", "minyak", "gas"],
+    "C_manufaktur": ["manufaktur", "industri", "pabrik", "produksi", "tekstil", "garmen", "otomotif", "elektronik", "farmasi", "makanan olahan", "minuman olahan", "kertas", "plastik", "logam", "kimia", "permesinan", "alat berat"],
+    "D_listrik_gas": ["listrik", "gas", "energi", "pln", "pembangkit", "pipa gas", "jaringan listrik", "energi terbarukan", "energi fosil", "energi", "pembangkit listrik", "pembangkit energi"],
+    "E_sampah": ["air bersih", "pengelolaan limbah", "sanitasi", "pdam", "sampah", "tpa", "tempat pembuangan akhir", "pengelolaan sampah", "daur ulang", "recycling"],
+    "F_konstruksi": ["konstruksi", "pembangunan", "proyek infrastruktur", "properti", "real estate", "bangunan", "jalan", "jembatan", "gedung", "perumahan", "apartemen"],
+    "G_perdagangan": ["perdagangan", "retail", "toko", "pasar", "e-commerce", "marketplace", "ekspor", "impor", "distributor", "grosir", "mal", "pusat perbelanjaan", "factory outlet"],
+    "H_transportasi": ["transportasi", "logistik", "angkutan", "pengiriman", "bandara", "pelabuhan", "kereta api", "bus", "truk", "kendaraan", "transportasi online", "ojol"],
+    "I_akomodasi": ["hotel", "restoran", "kafe", "kuliner", "pariwisata", "wisata", "hospitality", "penginapan", "makanan", "minuman", "catering", "event organizer", "penginapan", "akomodasi"],
+    "J_informasi_komunikasi": ["teknologi informasi", "telekomunikasi", "media", "startup", "it", "digital", "software", "hardware", "aplikasi", "internet", "komunikasi", "konten digital"],
+    "K_keuangan_asuransi": ["perbankan", "bank", "asuransi", "fintech", "keuangan", "kredit", "pinjaman", "investasi", "saham", "obligasi", "reksa dana", "asuransi jiwa", "asuransi kesehatan"],
+    "L_real_estate": ["real estate", "properti", "perumahan", "apartemen", "komersial", "residensial", "sewa", "kontrakan", "jual beli properti", "pengembangan properti"],
+    "O_administrasi_pemerintahan": ["pemerintah", "pemerintahan", "asn", "pns", "birokrasi", "apbd", "apbn", "anggaran", "dana desa", "dana alokasi khusus", "dana bantuan operasional sekolah", "dbos", "dana desa", "otonomi daerah", "pemda", "pemprov", "pemkot"],
+    "P_pendidikan": ["pendidikan", "sekolah", "universitas", "kampus", "guru", "dosen", "siswa", "mahasiswa", "kurikulum", "pembelajaran", "kelas", "ruang belajar", "pendidikan vokasi", "pelatihan kerja", "kursus", "bimbingan belajar"],
+    "Q_kesehatan_sosial": ["kesehatan", "rumah sakit", "klinik", "dokter", "perawat", "sosial", "kesejahteraan sosial", "bpjs kesehatan", "bpjs ketenagakerjaan", "panti sosial", "panti jompo", "panti asuhan"],
+    "R_kesenian_hiburan": ["seni", "budaya", "hiburan", "musik", "film", "event", "kreatif", "industri kreatif", "kegiatan seni", "kegiatan budaya"],
+    "S_jasa_lainnya": ["jasa", "laundry", "bengkel", "salon", "perawatan", "kecantikan", "kesehatan alternatif", "karaoke", "catering", "event organizer"],
+}
+
+
+# ===========================================================================
+# 4. IMPACT KEYWORDS (POSITIF / NEGATIF KETENAGAKERJAAN)
+# ===========================================================================
+
+IMPACT_KEYWORDS = {
+    "dampak_negatif_ketenagakerjaan": [
+        "phk", "pengangguran", "kehilangan pekerjaan", "dirumahkan", "pemutusan",
+        "pengurangan pekerja", "tutup", "bangkrut", "gulung tikar", "pailit",
+        "upah turun", "pendapatan menurun", "daya beli turun",
+    ],
+    "dampak_positif_ketenagakerjaan": [
+        "lowongan kerja", "rekrutmen", "penerimaan karyawan", "investasi baru",
+        "pembukaan pabrik", "perluasan usaha", "ekspansi", "pelatihan kerja",
+        "sertifikasi", "upskilling", "reskilling", "program magang",
+        "umk naik", "umr naik", "upah naik", "kenaikan gaji",
+    ],
+    "kebijakan_pemerintah": [
+        "kebijakan", "peraturan", "regulasi", "undang-undang", "perda",
+        "stimulus", "insentif", "subsidi", "bantuan", "program pemerintah",
+        "kartu prakerja", "prakerja", "jaminan sosial",
+    ],
+    "negatif_ekonomi": [
+        "resesi", "inflasi", "deflasi", "krisis", "kemiskinan",
+        "kesenjangan", "daya beli turun", "harga naik", "bangkrut",
+    ],
+    "positif_ekonomi": [
+        "pertumbuhan ekonomi", "investasi", "ekspor meningkat",
+        "PDRB naik", "daya beli meningkat", "pemulihan ekonomi",
+    ],
+}
+
+# ===========================================================================
+# 5. REGIONAL DATA — KOTA BANDUNG (30 KECAMATAN, 151 KELURAHAN)
+# ===========================================================================
+
+BANDUNG_DISTRICTS = {
+    "andir": ["andir", "kebon jeruk", "ciroyom", "dungus cariang", "garuda", "maleber", "campaka"],
+    "antapani": ["antapani", "antapani kidul", "antapani tengah", "antapani wetan"],
+    "arcamanik": ["arcamanik", "cisaranten bina harapan", "cisaranten endah", "cisaranten kulon", "sukamiskin"],
+    "astana anyar": ["astana anyar", "cibadak", "karang anyar", "nyengseret", "panjunan", "pelindung hewan"],
+    "babakan ciparay": ["babakan ciparay", "babakan", "cirangrang", "margahayu utara", "margasuka", "sukahaji"],
+    "bandung kidul": ["bandung kidul", "batununggal", "kujangsari", "mengger", "wates"],
+    "bandung kulon": ["bandung kulon", "caringin", "cibuntu", "cigondewah kaler", "cigondewah kidul", "cigondewah rahayu", "warung muncang", "gempol sari"],
+    "bandung wetan": ["bandung wetan", "cihapit", "citarum", "tamansari"],
+    "batununggal": ["batununggal", "binong", "gumuruh", "kebon waru", "kacapiring", "kebongedang", "maleer", "samoja", "cibangkong"],
+    "bojongloa kaler": ["bojongloa kaler", "babakan asih", "babakan tarogong", "jamika", "kopo", "suka asih"],
+    "bojongloa kidul": ["bojongloa kidul", "cibaduyut", "kebon lega", "mekarwangi", "situsaeur"],
+    "buahbatu": ["buahbatu", "cijawura", "margasari", "sekejati"],
+    "cibeunying kaler": ["cibeunying kaler", "cigadung", "cihaurgeulis", "neglasari", "sukaluyu"],
+    "cibeunying kidul": ["cibeunying kidul", "cicadas", "cikutra", "padasuka", "sukamaju", "sukapada"],
+    "cibiru": ["cibiru", "cipadung", "cisurupan", "palasari", "pasir biru"],
+    "cicendo": ["cicendo", "arjuna", "husein sastranegara", "pajajaran", "pamoyanan", "pasirkaliki"],
+    "cidadap": ["cidadap", "ciumbuleuit", "dago", "hegarmanah", "ledeng"],
+    "cinambo": ["cinambo", "babakan penghulu", "cisaranten wetan", "pakemitan", "sukamulya"],
+    "coblong": ["coblong", "cipaganti", "dago", "lebak gede", "lebak siliwangi", "sadang serang", "sekeloa"],
+    "gedebage": ["gedebage", "cimincrang", "cisaranten kidul", "rancabolang", "rancanumpang"],
+    "kiaracondong": ["kiaracondong", "babakan surabaya", "cicaheum", "kebon jayanti", "kebon kangkung", "sukapura"],
+    "lengkong": ["lengkong", "burangrang", "cijagra", "cikawao", "lingkar selatan", "malabar", "paledang", "turangga"],
+    "mandalajati": ["mandalajati", "jatihandap", "karang pamulang", "pasir impun", "sindang jaya"],
+    "panyileukan": ["panyileukan", "cibiruwetan", "cipadung kidul", "cipadung kulon", "cipadung wetan", "mekarsari"],
+    "rancasari": ["rancasari", "cipamokolan", "derwati", "manjahlega", "mekarjaya"],
+    "regol": ["regol", "ancol", "balonggede", "cisereuh", "cigereleng", "pungkur", "pasirluyu"],
+    "sukajadi": ["sukajadi", "cipedes", "pasteur", "sukabungah", "sukagalih", "sukawarna"],
+    "sukasari": ["sukasari", "gegerkalong", "isola", "sarijadi", "sukarasa"],
+    "sumur bandung": ["sumur bandung", "babakan ciamis", "braga", "kebon pisang", "merdeka"],
+    "ujung berung": ["ujung berung", "cigending", "pasanggrahan", "pasir endah", "pasir wangi", "pasir jati"],
+}
+BANDUNG_LOCATION_KEYWORDS = ["Bandung", "Kota Bandung", "Pemkot Bandung", "cihampelas", "alun-alun bandung"]
+for kecamatan, kelurahans in BANDUNG_DISTRICTS.items():
+    BANDUNG_LOCATION_KEYWORDS.append(kecamatan)
+    BANDUNG_LOCATION_KEYWORDS.extend(kelurahans)
+
+_compile_all_patterns()
+
+# ===========================================================================
+# 6. SCORING & RELEVANCE ENGINE
+# ===========================================================================
+
+def score_article(text) -> Dict:
+    """
+    Hitung skor relevansi artikel.
+    [BUG FIX] Handle None/empty text gracefully — return zero-score result.
+    """
+    # [BUG FIX] Guard against None/empty input
+    if not text:
+        return {
+            "euphemisms": [],
+            "sectors": [],
+            "impacts": [],
+            "locations": [],
+            "total_score": 0.0,
+            "score_breakdown": {"euphemism": 0, "sector": 0, "impact": 0, "location": 0},
+        }
+    normalized = preprocess_text(text)
+    results = {
+        "euphemisms": detect_euphemisms(text),
+        "sectors": [],
+        "impacts": [],
+        "locations": [],
+        "total_score": 0.0,
+    }
+    euph_summary = summarize_euphemisms(results["euphemisms"])
+    euph_score = min(50, euph_summary["total_matches"] * 5 + euph_summary["high_severity_count"] * 10)
+    # Sector score (0-20)
+    sector_score = 0
+    for sector, keywords in SECTOR_KEYWORDS.items():
+        for kw in keywords:
+            if kw.lower() in normalized:
+                results["sectors"].append(sector)
+                sector_score += 4
+                break
+    sector_score = min(20, sector_score)
+    # Impact score (0-20)
+    impact_score = 0
+    for impact_type, keywords in IMPACT_KEYWORDS.items():
+        for kw in keywords:
+            if kw.lower() in normalized:
+                results["impacts"].append({"type": impact_type, "keyword": kw})
+                impact_score += 3
+    impact_score = min(20, impact_score)
+    # Location score (0-10)
+    location_score = 0
+    for loc in BANDUNG_LOCATION_KEYWORDS:
+        if loc.lower() in normalized:
+            results["locations"].append(loc)
+            location_score += 2
+    location_score = min(10, location_score)
+    results["total_score"] = euph_score + sector_score + impact_score + location_score
+    results["score_breakdown"] = {
+        "euphemism": euph_score,
+        "sector": sector_score,
+        "impact": impact_score,
+        "location": location_score,
+    }
+    return results
+# ===========================================================================
+# 7. MAIN / ENTRY POINT
+# ===========================================================================
+if __name__ == "__main__":
+    sample_text = """
+    Sebanyak 500 karyawan pabrik tekstil di Majalaya dirumahkan akibat menurunnya
+    pesanan ekspor. Dinas Tenaga Kerja Kota Bandung mencatat angka pengangguran
+    terbuka meningkat 2% dibanding tahun lalu. Warga yang terdampak mengaku
+    kesulitan memenuhi kebutuhan pokok sehari-hari. Program rasionalisasi karyawan
+    telah berjalan sejak bulan lalu dengan skema pesangon.
+    """
+    result = score_article(sample_text)
+    print(f"Total Score: {result['total_score']}")
+    print(f"Euphemisms detected: {len(result['euphemisms'])}")
+    for e in result["euphemisms"]:
+        print(f"  [{e.severity.upper()}] {e.category}: '{e.matched_keyword}' ({e.match_type})")
+        print(f"    Context: {e.context_snippet}")
+    print(f"\nScore Breakdown: {result['score_breakdown']}")
+    print(f"Sectors: {result['sectors']}")
