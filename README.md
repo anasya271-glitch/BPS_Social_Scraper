@@ -74,17 +74,31 @@ Membangun infrastruktur data yang mampu menjembatani celah antara rilis berita p
 -----
 
 ## Struktur Proyek
+
 ```text
-📁
-.
-├── 📂 config/             # Target & Konfigurasi (Disembunyikan .gitignore)
-├── 📂 src/                # Inti mesin
-│   ├── 📂 archive/        # Script BETA
-│   └── *.py                # Scraping & AI Logic
-├── 📂 data/               # Penyimpanan data lokal (Disembunyikan .gitignore)
-├── .gitignore              # List file dan folder sensitif yang disembunyikan
-├── 📜 LICENSE             # Lisensi MIT dalam 2 bahasa
-└── 📜 README.md           # Dokumentasi serta deskripsi proyek
+📁 BPS_Social_Scraper/
+├── 📂 .github/                  # Konfigurasi GitHub Actions (CI/CD, Security Audit)
+├── 📂 config/                   # Berkas konfigurasi inti & daftar target
+│   ├── 📄 auth_state.json       # Manajemen sesi autentikasi
+│   ├── 📄 targets.json          # Target URL utama
+│   └── 📄 targets_archive.json  # Target terarsip
+├── 📂 data/                     # Brankas Data Lokal (Disembunyikan via .gitignore)
+│   ├── 📂 bmei/                 # Hasil audit Ekspor/Impor (Exports, Logs, Raw)
+│   ├── 📂 lnprt/                # Hasil audit Lembaga Sosial (Exports, Logs, Raw)
+│   └── 📂 naker/                # Hasil audit Ketenagakerjaan (Exports, Logs, Raw)
+├── 📂 naker/                    # [WIP] Eksperimental Modul Ketenagakerjaan (TDD)
+├── 📂 src/                      # Inti Mesin (Scraper & Logika)
+│   ├── 📄 auth_setup.py         # Skrip login otomatis
+│   ├── 📄 bmei_scraper.py       # Sentinel Modul Ekspor/Impor
+│   ├── 📄 lnprt_scraper.py      # Sentinel Modul Non-Profit
+│   ├── 📄 naker_scraper.py      # Sentinel Modul Ketenagakerjaan
+│   └── 📄 instagram_scraper.py  # Ekstraktor Media Sosial
+├── 📄 .gitignore                # Pengecualian berkas sensitif
+├── 📄 Modelfile_bmei            # Konfigurasi Ollama untuk Modul BMEI
+├── 📄 Modelfile_lnprt           # Konfigurasi Ollama untuk Modul LNPRT
+├── 📄 Modelfile_naker           # Konfigurasi Ollama untuk Modul NAKER
+├── 📄 LICENSE                   # MIT License
+└── 📄 README.md                 # Dokumentasi Proyek
 ```
 
 -----
@@ -147,8 +161,9 @@ Proyek ini akan terus berkembang:
 
 - [x] **Fase 1**: Mesin Scraping Inti (Instagram & News).
 - [x] **Fase 2**: Integrasi AI Lokal (Ollama).
-- [ ] **Fase 3**: Sistem Deteksi Anomali Otomatis.
-- [ ] **Fase 4**: Visualisasi Dashboard (Seaborn/Matplotlib integration).
+- [ ] **Fase 3**: Llama Stack
+- [ ] **Fase 4**: Sistem Deteksi Anomali Otomatis.
+- [ ] **Fase 5**: Visualisasi Dashboard (Seaborn/Matplotlib integration).
 
 ----
 
@@ -262,26 +277,26 @@ python src/instagram_scraper.py --target username_akun
 
 ##  Output & Laporan
 
-#### 📂 `data/exports/`
+#### 📂 `data/bmei/`
 
   * **Isi:** Berkas `.xlsx` yang sudah matang.
-  * **Peran:** Ini adalah produk akhir dari `llama_scraper.py`. Berisi rangkuman anomali, skor relevansi, dan teks berita yang sudah dibersihkan dari elemen iklan oleh fungsi Ad-Killer. Adapun database `BPS_Social_Scraper/visited_urls.txt` berguna untuk mencegah pemrosesan ganda (Deduplikasi).
+  * **Peran:** Ini adalah produk akhir dari `bmei_scraper.py`. Berisi rangkuman anomali, skor relevansi, tanggal berita, url berita, dan teks berita yang sudah dibersihkan dari elemen iklan oleh fungsi Ad-Killer. Adapun database `BPS_Social_Scraper/visited_urls.txt` berguna untuk mencegah pemrosesan ganda (Deduplikasi).
 
-#### 📂 `data/raw/`
+#### 📂 `data/bmei/`
 
   * **Isi:** Berkas data raw dari berformat `.xlsx`.
   * **Peran:** Ini adalah produk akhir dari `instagram_scraper.py`. Berisikan username institusi yang didata, url postingan, path tangkapan layar postingan yang didata, caption postingan, serta teks hasil ocr postingan.
-
-#### 📂 `data/logs/`
-
-  * **Isi:** Tangkapan layar peramban di Instagram.
-  * **Peran:** Digunakan untuk *troubleshooting* kode `IS_debug.py` yang merupakan versi debugging dari script `instagram_scraper.py`.
 
 #### 📂 `data/media/`
 
   * **Isi:** Gambar dari Instagram, *screenshot* postingan, atau grafik yang diunduh.
   * **Peran:** Pendukung narasi audit. Untuk `instagram_scraper.py`, folder ini menyimpan bukti visual bahwa asosiasi dagang tertentu memang mengeluhkan harga logistik (penting karena postingan IG bisa dihapus oleh pemiliknya, tapi Anda sudah punya cadangannya).
 
+#### 📂 `data/lnprt/`
+
+ * **Isi:** Berkas `.xlsx` yang sudah matang.
+  * **Peran:** Ini adalah produk akhir dari `lnprt_scraper.py'. Berisi rangkuman anomali, skor relevansi, tanggal berita, url berita, dan teks berita yang sudah dibersihkan dari elemen iklan oleh fungsi Ad-Killer. Adapun database `BPS_Social_Scraper/visited_urls.txt` berguna untuk mencegah pemrosesan ganda (Deduplikasi).
+    
 #### 📂 `data/edge_workspace/`
 
   * **Isi:** Salinan sementara profil browser Edge.
