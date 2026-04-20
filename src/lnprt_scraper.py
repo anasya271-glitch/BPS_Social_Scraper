@@ -17,6 +17,7 @@ from newspaper import Article, Config
 from playwright.async_api import async_playwright, TimeoutError, Error as PlaywrightError
 from urllib.parse import urlparse, urlencode, parse_qs, urlunparse
 import warnings
+from src.ai_engine import BPS_AI_Engine
 
 warnings.filterwarnings("ignore")
 
@@ -51,8 +52,7 @@ class BPS_LNPRT_Sentinel:
         
         self.load_visited_urls()
         
-        self.ollama_url = "http://localhost:11434/api/generate"
-        self.model_name = "bps-lnprt" 
+        self.ai_engine = BPS_AI_Engine() 
         
         self.browser_semaphore = asyncio.Semaphore(2)
         
@@ -339,21 +339,14 @@ class BPS_LNPRT_Sentinel:
         {truncated_text}
         """
         
-        payload = {
-            "model": self.model_name,
-            "prompt": custom_prompt,
-            "format": "json",
-            "stream": False
-        }
-        try:
-            response = await asyncio.to_thread(requests.post, self.ollama_url, json=payload, timeout=120)
-            if response.status_code == 200:
-                raw_json = response.json().get("response", "{}")
-                try: return json.loads(raw_json)
-                except json.JSONDecodeError: return {"Error": "Format SLM non-JSON"}
-            else: return {"Error": f"SLM Status {response.status_code}"}
-        except requests.exceptions.RequestException:
-            return {"Error": "Daemon Ollama tertidur / Port tertutup."}
+        # Eksekusi via Central AI Engine dengan Asynchronous Threading
+        audit_result = await asyncio.to_thread(self.ai_engine.classify_lnprt, custom_prompt)
+        
+        if audit_result:
+            return audit_result
+            
+        # Taktik Mitigasi: Pastikan error memicu status penolakan yang dapat dibaca oleh filter
+        return {"status_geografi": "Konteks Tidak Relevan (Error: Koneksi Terputus atau Format Invalid)"}
 
     def save_checkpoint(self):
         if not self.session_data: return

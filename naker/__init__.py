@@ -37,7 +37,6 @@ from naker.parser import ArticleParser
 from naker.scorer import RelevanceScorer
 from naker.interrogator import AIInterrogator
 from naker.manager import DataManager
-from naker.sentinel import NakerSentinel
 __all__ = [
     "ConfigLoader", "NewsScraper", "ArticleParser", "RelevanceScorer",
     "AIInterrogator", "DataManager", "NakerSentinel",

@@ -12,11 +12,11 @@ from datetime import datetime, timezone
 from typing import Dict, Any, Optional, List
 from pathlib import Path
 from collections import Counter
-
-from naker.bandung_scraper import EuphemismMatch, SEARCH_QUERIES
-from parser import extract_article_content, parse_date_robust
-from scorer import RelevanceScorer
-from manager import ArticleManager
+from naker.bandung_scraper import EuphemismMatch
+from naker.parser import extract_article_content, parse_date_safe
+from naker.scorer import RelevanceScorer
+from naker.manager import DataManager
+from src.ai_engine import BPS_AI_Engine
 
 logger = logging.getLogger("sentinel")
 
@@ -32,11 +32,14 @@ class NakerSentinel:
     def __init__(self, config: Dict[str, Any]):
         """
         Initialize all pipeline components from config.
-
-        Args:
-            config: Full configuration dict (typically loaded from YAML).
+        Standardizing on BPS_AI_Engine for centralized LLM orchestration.
         """
         self.config = config
+        
+        # Inisialisasi mesin AI pusat sebagai orkestrator inferensi
+        self.model_name = self.config.get("model_name", "bps-naker")
+        self.ai_engine = BPS_AI_Engine()
+        
         self.start_time: Optional[datetime] = None
         self.end_time: Optional[datetime] = None
 
@@ -44,9 +47,9 @@ class NakerSentinel:
         self._setup_logging()
 
         # Initialize components
-        self.scraper = BandungScraper(config=config.get("scraper", {}))
+        self.scraper = EuphemismMatch(config=config.get("scraper", {}))
         self.scorer = RelevanceScorer(config.get("scorer", {}))
-        self.manager = ArticleManager(config.get("manager", {}))
+        self.manager = DataManager(config.get("manager", {}))
 
         # Pipeline state
         self.raw_articles: List[Dict[str, Any]] = []
@@ -150,6 +153,15 @@ class NakerSentinel:
                     selectors=art.get("selectors"),
                 )
                 art.update(result)
+                
+                # [NEW FIX] Ekstrak konten teks utama untuk Ollama nanti
+                # (Mencoba mencari kunci 'body', 'text', atau fallback ke 'snippet')
+                art['content'] = art.get('body') or art.get('text') or art.get('snippet') or ""
+                
+                # [NEW FIX] Merapikan format tanggal menggunakan parser BPS
+                raw_date = art.get("published") or art.get("date") or ""
+                art["date"] = parse_date_safe(raw_date)
+
                 if result.get("success"):
                     success_count += 1
                     parsed.append(art)
@@ -250,89 +262,81 @@ class NakerSentinel:
         self.filtered_articles = filtered
         return filtered
 
-    def stage_interrogate(self, articles: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
-        """Stage 5: Deep analysis — tag topics, classify urgency, extract key entities."""
-        logger.info("=" * 50)
-        logger.info("STAGE 5: INTERROGATE — Deep tagging and classification")
-        logger.info("=" * 50)
+    def stage_interrogate(self, article: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Stage 4: Deep analysis using local SLM (Ollama).
+        Mengirim teks artikel ke model bps-naker untuk klasifikasi KBLI,
+        analisis dampak (bekerja/pengangguran), dan ekstraksi ringkasan.
+        """
+        if not self.config.get("interrogate", {}).get("extract_entities", True):
+            return article
 
-        t0 = datetime.now(timezone.utc)
-        interr_cfg = self.config.get("interrogate", {})
-        do_entities = interr_cfg.get("extract_entities", True)
-        do_topic = interr_cfg.get("classify_topic", True)
-        do_urgency = interr_cfg.get("tag_urgency", True)
+        import requests
+        import json
+        import re
 
-        # Topic classification keywords
-        topic_map = {
-            "phk": ["phk", "pemutusan hubungan kerja", "pemecatan", "layoff"],
-            "upah": ["upah", "gaji", "umk", "ump", "thr", "lembur", "take home pay"],
-            "demo": ["demo", "aksi", "mogok", "unjuk rasa", "protes"],
-            "kecelakaan_kerja": ["kecelakaan kerja", "k3", "keselamatan", "meninggal saat kerja"],
-            "kebijakan": ["peraturan", "kebijakan", "regulasi", "omnibus", "uu cipta kerja", "perda"],
-            "lowongan": ["lowongan", "rekrutmen", "hiring", "bursa kerja", "job fair"],
-            "bpjs": ["bpjs", "jaminan sosial", "jamsostek"],
-            "outsourcing": ["outsourcing", "alih daya", "kontrak kerja"],
-        }
+        text = article.get("content", "")
+        if not text:
+            text = article.get("snippet", "")
+            
+        if not text:
+            article["status_geografi"] = "Error: Teks Kosong"
+            return article
+            
+        # Smart Truncate (Maksimal 1500 karakter, amankan bukti lokasi "Bandung")
+        text_lower = text.lower()
+        if len(text) > 1500:
+            first_chunk = text[:800]
+            match = re.search(r'bandung', text_lower[800:])
+            if match:
+                start_idx = 800 + max(0, match.start() - 350)
+                end_idx = 800 + min(len(text_lower[800:]), match.start() + 350)
+                second_chunk = text[start_idx:end_idx]
+                truncated_text = first_chunk + "\n\n...[POTONGAN BUKTI LOKASI]...\n\n" + second_chunk
+            else:
+                truncated_text = text[:1500]
+        else:
+            truncated_text = text
 
-        # Urgency keywords
-        urgency_high = ["phk massal", "mogok", "demo besar", "kecelakaan fatal", "tewas", "meninggal"]
-        urgency_medium = ["phk", "demo", "unjuk rasa", "pelanggaran", "mangkir"]
+        # Hukum Absolut Prompt NAKER BPS
+        custom_prompt = f"""
+        Lakukan audit investigatif pada teks berita berikut untuk laporan Fenomena Ketenagakerjaan BPS Kota Bandung.
+        Keluarkan format JSON MURNI dengan keys:
+        1. "status_geografi" (Valid Kota Bandung / Out of Jurisdiction / Irrelevant)
+        2. "ringkasan_berita" (Satu paragraf padat merangkum kejadian utama ketenagakerjaan).
+        3. "dampak_bekerja" (1 Naik / 2 Turun / 3 Tetap)
+        4. "dampak_pengangguran" (1 Naik / 2 Turun / 3 Tetap)
+        5. "kategori_kbli" (Pilih SATU Kategori Huruf A sampai U yang paling relevan beserta namanya. Misal: "C. Industri Pengolahan", "G. Perdagangan", dll).
+        6. "confidence_score" (0-100, seberapa yakin Anda dengan analisis dampak naik/turun ini berdasarkan teks).
+        
+        ATURAN ANALISIS (HUKUM ABSOLUT):
+        - Status Geofencing HARUS "Valid Kota Bandung" JIKA peristiwa terjadi secara fisik di Kota Bandung.
+        - Pekerja NAIK & Pengangguran TURUN jika: Pembukaan pabrik, job fair besar, ekspansi bisnis, proyek infrastruktur jalan.
+        - Pekerja TURUN & Pengangguran NAIK jika: PHK massal, pabrik tutup, gulung tikar, gagal panen, omzet anjlok drastis.
+        - Jika hanya membahas isu normatif (Tuntutan UMK, Aturan THR, Demo tanpa PHK), status keduanya adalah '3 Tetap'.
+        - TOLAK JIKA (Irrelevant Context): Hanya berita info lowongan kerja individual (cara melamar, link loker, syarat CPNS) yang tidak berdampak pada ekonomi makro. Atau jika peristiwa tidak terjadi di Bandung.
+        
+        Teks Berita:
+        {truncated_text}
+        """
 
-        for art in articles:
-            text = f"{art.get('title', '')} {art.get('body', '')}".lower()
+        logger.info(f"Mengirim Context Window (Smart Truncated) ke SLM: {article.get('url')[:50]}...")
+        
+        audit_result = self.ai_engine.classify_naker(custom_prompt)
 
-            # Topic classification
-            if do_topic:
-                topics = []
-                for topic, keywords in topic_map.items():
-                    if any(kw in text for kw in keywords):
-                        topics.append(topic)
-                art["topics"] = topics if topics else ["umum"]
+        if audit_result:
+            article.update({
+                "status_geografi": audit_result.get("status_geografi", "Unknown"),
+                "ringkasan_berita": audit_result.get("ringkasan_berita", ""),
+                "dampak_bekerja": audit_result.get("dampak_bekerja", ""),
+                "dampak_pengangguran": audit_result.get("dampak_pengangguran", ""),
+                "kategori_kbli": audit_result.get("kategori_kbli", ""),
+                "confidence_score": audit_result.get("confidence_score", "N/A")
+            })
+        else:
+            article["status_geografi"] = "Error: Daemon Ollama tertidur / Port tertutup."
 
-            # Urgency tagging
-            if do_urgency:
-                if any(kw in text for kw in urgency_high):
-                    art["urgency"] = "HIGH"
-                elif any(kw in text for kw in urgency_medium):
-                    art["urgency"] = "MEDIUM"
-                else:
-                    art["urgency"] = "LOW"
-
-            # Entity extraction (simple keyword-based)
-            if do_entities:
-                entities = {
-                    "organizations": [],
-                    "locations": [],
-                }
-                org_keywords = [
-                    "disnaker", "kemnaker", "apindo", "kspi", "kspsi", "ksbsi",
-                    "serikat pekerja", "federasi", "konfederasi", "bpjs ketenagakerjaan",
-                ]
-                for org in org_keywords:
-                    if org in text:
-                        entities["organizations"].append(org)
-
-                geo_keywords = self.config.get("scorer", {}).get("keywords", {}).get("geographic", [])
-                for loc in geo_keywords:
-                    if loc.lower() in text:
-                        entities["locations"].append(loc)
-
-                art["entities"] = entities
-
-        duration = (datetime.now(timezone.utc) - t0).total_seconds()
-        self.stats["stage_interrogate"] = {
-            "input": len(articles),
-            "topics_assigned": sum(1 for a in articles if a.get("topics")),
-            "urgency_high": sum(1 for a in articles if a.get("urgency") == "HIGH"),
-            "urgency_medium": sum(1 for a in articles if a.get("urgency") == "MEDIUM"),
-            "urgency_low": sum(1 for a in articles if a.get("urgency") == "LOW"),
-            "duration_s": round(duration, 2),
-        }
-
-        logger.info(f"Interrogated {len(articles)} articles in {duration:.1f}s.")
-        self.interrogated_articles = articles
-        return articles
-
+        return article
     def stage_save(self, articles: List[Dict[str, Any]]) -> int:
         """Stage 6: Persist articles via manager and generate report."""
         logger.info("=" * 50)
@@ -344,15 +348,55 @@ class NakerSentinel:
 
         for art in articles:
             try:
+                # Ini akan mendaftarkan artikel ke dalam memori manager.py
                 self.manager.save_article(art)
                 saved_count += 1
             except Exception as e:
                 logger.error(f"Failed to save article '{art.get('title', '?')}': {e}")
 
-        # Checkpoint after batch save
+        # Checkpoint JSON setelah batch save
         self.manager.save_checkpoint()
+        
+        # [NEW FIX] Trigger pembuatan file Excel BPS!
+        try:
+            # Jika di dalam manager.py Anda ada fungsi untuk export Excel, panggil di sini:
+            # self.manager.export_to_excel() # <- Uncomment ini jika Anda punya fungsi tsb di manager.py
+            
+            # Jika TIDAK ADA fungsi export_to_excel di manager.py, kita buat excel-nya secara mandiri di sini:
+            import pandas as pd
+            excel_dir = Path("data/naker/exports")
+            excel_dir.mkdir(parents=True, exist_ok=True)
+            excel_file = excel_dir / f"bps_audit_naker_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx"
+            
+            df = pd.DataFrame(articles)
+            
+            # Merapikan kolom sesuai format BPS
+            if not df.empty:
+                # Mapping kunci dictionary ke nama kolom Excel yang rapi
+                rename_map = {
+                    "ringkasan_berita": "Ringkasan Berita/Informasi Utama",
+                    "url": "Sumber Berita (URL)",
+                    "date": "Tanggal Berita",
+                    "dampak_bekerja": "Bekerja (1 Naik / 2 Turun / 3 Tetap)",
+                    "dampak_pengangguran": "Pengangguran (1 Naik / 2 Turun / 3 Tetap)",
+                    "kategori_kbli": "Kategori Lapangan Usaha (KBLI)",
+                    "confidence_score": "Confidence Score (%)",
+                    "status_geografi": "Status Geografi",
+                    "title": "Judul Asli"
+                }
+                df = df.rename(columns=rename_map)
+                
+                # Memilih kolom yang ingin ditampilkan (jika ada)
+                expected_cols = list(rename_map.values())
+                available_cols = [c for c in expected_cols if c in df.columns]
+                
+                df[available_cols].to_excel(excel_file, index=False, engine='openpyxl')
+                logger.info(f"Excel Final berhasil dibuat: {excel_file}")
+                
+        except Exception as e:
+            logger.error(f"Gagal membuat file Excel: {e}")
 
-        # Generate text report
+        # Generate text report (Biarkan bawaan aslinya tetap ada)
         report_cfg = self.config.get("report", {})
         output_dir = Path(report_cfg.get("output_dir", "reports"))
         output_dir.mkdir(parents=True, exist_ok=True)
@@ -370,9 +414,9 @@ class NakerSentinel:
                     f.write(f"   URL: {art.get('url', '-')}\n")
                     f.write(f"   Topics: {', '.join(art.get('topics', []))}\n")
                     f.write(f"   Urgency: {art.get('urgency', '-')}\n\n")
-            logger.info(f"Report saved to {report_file}")
+            logger.info(f"Report txt saved to {report_file}")
         except Exception as e:
-            logger.error(f"Failed to write report: {e}")
+            logger.error(f"Failed to write report txt: {e}")
 
         duration = (datetime.now(timezone.utc) - t0).total_seconds()
         self.stats["stage_save"] = {
@@ -387,6 +431,7 @@ class NakerSentinel:
 
     async def run(self):
         """Execute the full pipeline sequentially."""
+        from .bandung_scraper import SEARCH_QUERIES
         self.start_time = datetime.now(timezone.utc)
         logger.info("🚀 NAKER SENTINEL pipeline starting...")
         logger.info(f"Start time: {self.start_time.isoformat()}")
@@ -413,11 +458,21 @@ class NakerSentinel:
                 logger.warning("All articles filtered out. Nothing to save.")
                 return
 
-            # Stage 5: Interrogate
-            interrogated = self.stage_interrogate(filtered)
+            # Stage 5: Interrogate — Sequential Processing untuk menjaga VRAM GPU 1630 Anda
+            logger.info("=" * 50)
+            logger.info("STAGE 5: INTERROGATE — Deep AI Analysis (Sequential)")
+            logger.info("=" * 50)
+            
+            interrogated_list = []
+            for art in filtered:
+                # Memproses satu per satu agar tidak terjadi VRAM Overflow
+                result = self.stage_interrogate(art)
+                interrogated_list.append(result)
+            
+            self.interrogated_articles = interrogated_list
 
             # Stage 6: Save
-            self.stage_save(interrogated)
+            self.stage_save(interrogated_list)
 
         except Exception as e:
             logger.critical(f"Pipeline failed with unhandled error: {e}", exc_info=True)
