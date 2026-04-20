@@ -12,10 +12,10 @@ from datetime import datetime, timezone
 from typing import Dict, Any, Optional, List
 from pathlib import Path
 from collections import Counter
-from naker.bandung_scraper import EuphemismMatch
-from naker.parser import extract_article_content, parse_date_safe
-from naker.scorer import RelevanceScorer
-from naker.manager import DataManager
+from .bandung_scraper import BandungScraper, EuphemismMatch
+from .parser import extract_article_content, parse_date_safe
+from .scorer import RelevanceScorer
+from .manager import DataManager
 from src.ai_engine import BPS_AI_Engine
 
 logger = logging.getLogger("sentinel")
@@ -34,20 +34,37 @@ class NakerSentinel:
         Initialize all pipeline components from config.
         Standardizing on BPS_AI_Engine for centralized LLM orchestration.
         """
-        self.config = config
+        self.config = config or {}
+        
+        # Penambahan 33 Situs Lengkap (High, Medium, Low Tier)
+        self.sites = [
+            "bandung.go.id", "tempo.co", "tirto.id", "narasi.tv",
+            "ayobandung.com", "pikiran-rakyat.com", "bandung.kompas.com",
+            "disdagin.bandung.go.id", "cnnindonesia.com", "rri.co.id",
+            "jabarprov.go.id", "bps.go.id", "kemnaker.go.id", "kompas.com", "detik.com",
+            "radarbandung.id", "kumparan.com", "infobandungkota.com",
+            "prfmnews.id", "kilasbandungnews.com", "bandungbergerak.id",
+            "koranmandala.com", "jabarekspres.com", "jabar.tribunnews.com",
+            "liputan6.com", "merdeka.com", "sindonews.com",
+            "blogspot.com", "wordpress.com", "medium.com",
+            "facebook.com", "twitter.com", "instagram.com"
+        ]
         
         # Inisialisasi mesin AI pusat sebagai orkestrator inferensi
         self.model_name = self.config.get("model_name", "bps-naker")
         self.ai_engine = BPS_AI_Engine()
         
-        self.start_time: Optional[datetime] = None
-        self.end_time: Optional[datetime] = None
+        self.mode = self.config.get("mode", "live")
+        self.start_date = self.config.get("start", "")
+        self.end_date = self.config.get("end", "")
+        
+        self.edge_source_dir = str(Path.home() / "AppData" / "Local" / "Microsoft" / "Edge" / "User Data")
 
         # Setup logging first
         self._setup_logging()
 
         # Initialize components
-        self.scraper = EuphemismMatch(config=config.get("scraper", {}))
+        self.scraper = BandungScraper(config.get("scraper", {}))
         self.scorer = RelevanceScorer(config.get("scorer", {}))
         self.manager = DataManager(config.get("manager", {}))
 
@@ -298,31 +315,9 @@ class NakerSentinel:
         else:
             truncated_text = text
 
-        # Hukum Absolut Prompt NAKER BPS
-        custom_prompt = f"""
-        Lakukan audit investigatif pada teks berita berikut untuk laporan Fenomena Ketenagakerjaan BPS Kota Bandung.
-        Keluarkan format JSON MURNI dengan keys:
-        1. "status_geografi" (Valid Kota Bandung / Out of Jurisdiction / Irrelevant)
-        2. "ringkasan_berita" (Satu paragraf padat merangkum kejadian utama ketenagakerjaan).
-        3. "dampak_bekerja" (1 Naik / 2 Turun / 3 Tetap)
-        4. "dampak_pengangguran" (1 Naik / 2 Turun / 3 Tetap)
-        5. "kategori_kbli" (Pilih SATU Kategori Huruf A sampai U yang paling relevan beserta namanya. Misal: "C. Industri Pengolahan", "G. Perdagangan", dll).
-        6. "confidence_score" (0-100, seberapa yakin Anda dengan analisis dampak naik/turun ini berdasarkan teks).
-        
-        ATURAN ANALISIS (HUKUM ABSOLUT):
-        - Status Geofencing HARUS "Valid Kota Bandung" JIKA peristiwa terjadi secara fisik di Kota Bandung.
-        - Pekerja NAIK & Pengangguran TURUN jika: Pembukaan pabrik, job fair besar, ekspansi bisnis, proyek infrastruktur jalan.
-        - Pekerja TURUN & Pengangguran NAIK jika: PHK massal, pabrik tutup, gulung tikar, gagal panen, omzet anjlok drastis.
-        - Jika hanya membahas isu normatif (Tuntutan UMK, Aturan THR, Demo tanpa PHK), status keduanya adalah '3 Tetap'.
-        - TOLAK JIKA (Irrelevant Context): Hanya berita info lowongan kerja individual (cara melamar, link loker, syarat CPNS) yang tidak berdampak pada ekonomi makro. Atau jika peristiwa tidak terjadi di Bandung.
-        
-        Teks Berita:
-        {truncated_text}
-        """
-
         logger.info(f"Mengirim Context Window (Smart Truncated) ke SLM: {article.get('url')[:50]}...")
         
-        audit_result = self.ai_engine.classify_naker(custom_prompt)
+        audit_result = self.ai_engine.classify_naker(truncated_text)
 
         if audit_result:
             article.update({
@@ -431,9 +426,8 @@ class NakerSentinel:
 
     async def run(self):
         """Execute the full pipeline sequentially."""
-        from .bandung_scraper import SEARCH_QUERIES
         self.start_time = datetime.now(timezone.utc)
-        logger.info("🚀 NAKER SENTINEL pipeline starting...")
+        logger.info("NAKER SENTINEL pipeline starting...")
         logger.info(f"Start time: {self.start_time.isoformat()}")
 
         try:
@@ -676,6 +670,19 @@ def build_cli() -> argparse.ArgumentParser:
         action="store_true",
         help="Run pipeline without saving results (for testing)",
     )
+    parser.add_argument(
+        "--mode", type=str, default="live", choices=["live", "history"],
+        help="Mode eksekusi (live/history)"
+    )
+    parser.add_argument(
+        "--start", type=str, default="", help="Format: YYYY-MM-DD"
+    )
+    parser.add_argument(
+        "--end", type=str, default="", help="Format: YYYY-MM-DD"
+    )
+    parser.add_argument(
+        "--merge", action="store_true", help="Satukan semua file audit menjadi satu Excel utama"
+    )
     return parser
 
 
@@ -691,12 +698,25 @@ def main():
     if args.verbose:
         config.setdefault("logging", {})["level"] = "DEBUG"
 
-    # Dry-run flag
+    # Sinkronisasi parameter CLI ke konfigurasi scraper
+    config.setdefault("scraper", {})
+    config["scraper"].update({
+        "mode": args.mode,
+        "start": args.start,
+        "end": args.end
+    })
+
     if args.dry_run:
         config["dry_run"] = True
 
-    # Create and run pipeline
     sentinel = NakerSentinel(config)
+    
+    # Jalur eksekusi khusus: MERGE (Audit-Ready)
+    if args.merge:
+        logger.info(" [!] Memulai Prosedur Penggabungan Data Audit...")
+        sentinel.manager.merge_audit_files(start_date=args.start, end_date=args.end)
+        return
+
     asyncio.run(sentinel.run())
 
 

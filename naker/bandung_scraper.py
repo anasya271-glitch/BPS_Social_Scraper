@@ -17,9 +17,21 @@ Mencakup:
 - score_article handles empty/None text
 - Graceful skip for invalid regex patterns
 """
+import os
 import re
 import logging
+import asyncio
+import feedparser
+import urllib.parse
+import base64
+import shutil
+import requests
+from pathlib import Path
 from collections import defaultdict
+from dataclasses import dataclass, field
+from typing import List, Dict, Tuple, Optional, Any
+from urllib.parse import urlparse, urlencode, parse_qs, urlunparse
+from playwright.async_api import async_playwright, TimeoutError, Error as PlaywrightError
 from dataclasses import dataclass, field
 from typing import List, Dict, Tuple, Optional
 logger = logging.getLogger("naker.bandung_scraper")
@@ -885,9 +897,240 @@ def score_article(text) -> Dict:
         "location": location_score,
     }
     return results
+
 # ===========================================================================
-# 7. MAIN / ENTRY POINT
+# 7. THE ENGINE: BANDUNG SCRAPER (V66 PLAYWRIGHT INTEGRATION)
+# Murni berfungsi sebagai pengumpul HTML, tanpa logika analitik.
 # ===========================================================================
+
+class BandungScraper:
+    def __init__(self, config: Dict[str, Any] = None):
+        self.config = config or {}
+        # Radar 33 Situs Lengkap (High, Medium, Low Tier)
+        self.sites = [
+            "bandung.go.id", "tempo.co", "tirto.id", "narasi.tv",
+            "ayobandung.com", "pikiran-rakyat.com", "bandung.kompas.com",
+            "disdagin.bandung.go.id", "cnnindonesia.com", "rri.co.id",
+            "jabarprov.go.id", "bps.go.id", "kemnaker.go.id", "kompas.com", "detik.com",
+            "radarbandung.id", "kumparan.com", "infobandungkota.com",
+            "prfmnews.id", "kilasbandungnews.com", "bandungbergerak.id",
+            "koranmandala.com", "jabarekspres.com", "jabar.tribunnews.com",
+            "liputan6.com", "merdeka.com", "sindonews.com",
+            "blogspot.com", "wordpress.com", "medium.com",
+            "facebook.com", "twitter.com", "instagram.com"
+        ]
+        
+        self.mode = self.config.get("mode", "live")
+        self.start_date = self.config.get("start", "")
+        self.end_date = self.config.get("end", "")
+
+        # Konfigurasi Edge Profile (Otomatis menggunakan Cookies/Credentials Anda)
+        self.edge_source_dir = str(Path.home() / "AppData" / "Local" / "Microsoft" / "Edge" / "User Data")
+        self.workspace_dir = Path.cwd() / "data" / "edge_workspace"
+        os.makedirs(self.workspace_dir, exist_ok=True)
+        self.browser_semaphore = asyncio.Semaphore(3)
+
+    async def discover_articles(self) -> List[Dict[str, Any]]:
+        """
+        Tahap 1: Dynamic Matrix Engine.
+        Memecah kueri menjadi klaster (PHK, Loker, UMK) untuk menembus limitasi Google.
+        """
+        KLASTER_ISU = {
+            "PHK_Krisis": '("PHK" OR "pabrik tutup" OR "gulung tikar" OR "dirumahkan")',
+            "Ekspansi_Loker": '("lowongan kerja" OR "job fair" OR "rekrutmen" OR "padat karya")',
+            "Normatif_Industrial": '("UMK" OR "demo buruh" OR "upah minimum" OR "serikat pekerja")'
+        }
+        
+        rentang_waktu = []
+        if self.mode == "history" and (self.start_date or self.end_date):
+            t_query = ""
+            if self.start_date: t_query += f" after:{self.start_date}"
+            if self.end_date: t_query += f" before:{self.end_date}"
+            rentang_waktu.append(t_query.strip())
+        else:
+            rentang_waktu = ["when:1d", "when:7d"]
+
+        logger.info(f" [>] Radar V66 Aktif: {len(self.sites)} Situs x {len(KLASTER_ISU)} Isu.")
+        
+        all_tasks = []
+        for site in self.sites:
+            for k_nama, k_query in KLASTER_ISU.items():
+                for waktu in rentang_waktu:
+                    all_tasks.append(self._fetch_rss_matrix(site, k_nama, k_query, waktu))
+        
+        matrix_results = await asyncio.gather(*all_tasks)
+        
+        seen_urls = set()
+        final_entries = []
+        for group in matrix_results:
+            for item in group:
+                if item["url"] not in seen_urls:
+                    seen_urls.add(item["url"])
+                    final_entries.append(item)
+                    
+        return final_entries
+
+    async def _fetch_rss_matrix(self, site, k_nama, k_query, waktu) -> List[Dict]:
+        query = f'site:{site} "Kota Bandung" {k_query} {waktu}'.strip()
+        rss_url = f"https://news.google.com/rss/search?q={urllib.parse.quote(query)}&hl=id&gl=ID&ceid=ID:id"
+        res = []
+        try:
+            feed = await asyncio.to_thread(feedparser.parse, rss_url)
+            for e in feed.entries[:10]:
+                res.append({
+                    "url": self._decode_google_url(e.link),
+                    "title": e.title,
+                    "site": site,
+                    "published": e.get("published", ""),
+                    "klaster": k_nama
+                })
+        except: pass
+        return res
+
+    def prepare_workspace(self):
+        """Sinkronisasi ruang isolasi browser (Standard V66)."""
+        logger.info(" [>] Sinkronisasi Ruang Isolasi Browser...")
+        source = Path(self.edge_source_dir) / "Default"
+        target = self.workspace_dir / "Default"
+        if target.exists(): shutil.rmtree(target, ignore_errors=True)
+        try: shutil.copytree(source, target, ignore=shutil.ignore_patterns("SingletonLock", "lock"))
+        except: pass
+
+    def _decode_google_url(self, url: str) -> str:
+        """Menerjemahkan link Google News menjadi URL asli."""
+        real_url = url
+        if "articles/CBM" in url:
+            try:
+                encoded_str = url.split("articles/")[1].split("?")[0]
+                padding = 4 - (len(encoded_str) % 4)
+                encoded_str += "=" * padding
+                decoded_bytes = base64.urlsafe_b64decode(encoded_str)
+                match = re.search(rb'(https?://[a-zA-Z0-9\-\.\_\/\?\=\&\%\+]+)', decoded_bytes)
+                if match: real_url = match.group(1).decode('utf-8')
+            except Exception: pass
+        
+        if any(domain in real_url for domain in ["tribunnews.com", "pikiran-rakyat.com", "ayobandung.com", "kompas.com", "tirto.id"]):
+            parsed = urlparse(real_url)
+            params = parse_qs(parsed.query)
+            params['page'] = ['all']
+            new_query = urlencode(params, doseq=True)
+            real_url = urlunparse(parsed._replace(query=new_query))
+        return real_url
+
+    def verify_mime_type(self, url: str) -> Tuple[bool, str]:
+        """Validasi ekstensi file tanpa perlu mengunduh seluruh HTML."""
+        headers = {"User-Agent": "Mozilla/5.0"}
+        for attempt in range(2):
+            try:
+                with requests.get(url, stream=True, headers=headers, timeout=5) as response:
+                    content_type = response.headers.get('Content-Type', '').lower()
+                    if 'application/' in content_type and 'xhtml' not in content_type:
+                        return False, f"Format Ditolak ({content_type})"
+                    return True, "Valid HTML"
+            except requests.exceptions.Timeout:
+                if attempt == 1: return True, "MIME Timeout"
+            except: return True, "MIME Error"
+        return True, "MIME Error"
+
+    async def network_interceptor(self, route):
+        """Memblokir iklan dan pelacak untuk menghemat RAM (V66 Logic)."""
+        url = route.request.url.lower()
+        if any(ad in url for ad in ["doubleclick.net", "googlesyndication.com", "ads-twitter.com"]):
+            await route.abort()
+            return
+        await route.continue_()
+
+    async def execute_hydration_scroll(self, page):
+        """Scroll dinamis untuk memicu lazy-load gambar/teks."""
+        try:
+            viewport_height = await page.evaluate("window.innerHeight")
+            for _ in range(5):
+                await page.evaluate(f"window.scrollBy(0, {viewport_height * 0.7})")
+                await page.wait_for_timeout(800)
+            await page.evaluate("window.scrollTo(0, 0)")
+            await page.wait_for_timeout(1000)
+        except: pass
+
+    async def fetch_with_backoff(self, page, url, max_retries=3):
+        """Mengunduh HTML dengan sistem antrian pintar."""
+        for attempt in range(max_retries):
+            try:
+                response = await page.goto(url, wait_until="domcontentloaded", timeout=30000)
+                if response and response.status in [429, 503]:
+                    wait_time = 2 ** attempt
+                    await asyncio.sleep(wait_time)
+                    continue
+                return response
+            except Exception as e:
+                if attempt == max_retries - 1: raise
+                await asyncio.sleep(2)
+        raise Exception("Max retries exceeded")
+
+    async def fetch_all_articles(self, articles: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+        """Tahap 2 Sentinel: Mengunduh konten menggunakan Playwright."""
+        self.prepare_workspace()
+        results = []
+        
+        async with async_playwright() as p:
+            context = await p.chromium.launch_persistent_context(
+                user_data_dir=str(self.workspace_dir),
+                channel="msedge",
+                headless=True,
+                args=["--disable-blink-features=AutomationControlled"]
+            )
+            
+            # Membatasi batch ke 10 agar RAM PC kantor Anda (16GB) tidak kepenuhan
+            batch_size = 10
+            for i in range(0, len(articles), batch_size):
+                batch = articles[i:i+batch_size]
+                tasks = [self._process_single_article(context, art) for art in batch]
+                batch_results = await asyncio.gather(*tasks)
+                results.extend(batch_results)
+                
+            await context.close()
+            
+        return results
+
+    async def _process_single_article(self, context, article_data: Dict[str, Any]) -> Dict[str, Any]:
+        """Tugas tunggal mengunduh HTML dari URL."""
+        url = article_data["url"]
+        
+        # Pre-flight MIME check
+        is_html, _ = await asyncio.to_thread(self.verify_mime_type, url)
+        if not is_html:
+            article_data["fetch_success"] = False
+            return article_data
+
+        async with self.browser_semaphore:
+            page = await context.new_page()
+            await page.route("**/*", self.network_interceptor)
+            try:
+                await self.fetch_with_backoff(page, url)
+                await page.wait_for_timeout(2000)
+                
+                # Cek Cloudflare (V66 Tactic)
+                try:
+                    iframe = await page.wait_for_selector('iframe[src*="cloudflare"], #challenge-running', timeout=4000)
+                    if iframe:
+                        await page.wait_for_function(
+                            "document.querySelector('iframe[src*=\"cloudflare\"]') === null && document.querySelector('#challenge-running') === null",
+                            timeout=60000
+                        )
+                except: pass
+                
+                await self.execute_hydration_scroll(page)
+                html_content = await page.content()
+                
+                article_data["html"] = html_content
+                article_data["fetch_success"] = True
+            except Exception as e:
+                article_data["fetch_success"] = False
+                article_data["error"] = str(e)
+            finally:
+                if not page.is_closed(): await page.close()
+                
+        return article_data
+
 if __name__ == "__main__":
     sample_text = """
     Sebanyak 500 karyawan pabrik tekstil di Majalaya dirumahkan akibat menurunnya

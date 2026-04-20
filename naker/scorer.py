@@ -57,10 +57,85 @@ for _pat in NEGATIVE_PATTERNS:
     except re.error as _e:
         logger.warning(f"Invalid negative regex pattern '{_pat}': {_e}")
 
-EXCLUSION_KEYWORDS = [
-    "horoscope", "zodiak", "resep masakan", "liga sepakbola",
-    "gosip artis", "drakor", "K-pop",
-]
+# ============================================================
+# V66 SMART SCORING CONFIGURATION (BPS-NAKER V66)
+# ============================================================
+SCORING_MATRIX = {
+    'explicit_kota_bandung': 40,      # "Kota Bandung", "Pemkot Bandung"
+    'kecamatan_mention': 30,          # Cicendo, Coblong, etc
+    'bandung_generic': 20,            # Just "Bandung"
+    'bandung_with_context': 35,       # "Bandung" + street/landmark
+    'naker_explicit_3plus': 40,       # >=3 keywords
+    'naker_explicit_2': 30,           # 2 keywords
+    'naker_explicit_1': 20,           # 1 keyword
+    'naker_euphemism': 35,            # Indirect terms
+    'blacklist_strong': -60,          # "Kabupaten Bandung" + blacklist
+    'blacklist_weak': -30,            # Province mention
+    'noise_detected': -25,            # Spam/academic
+    'dual_mention_unclear': -15,      # Kota+Kab both mentioned ambiguously
+    'domain_credibility': 10,         # Kompas, Tempo, govt
+    'title_match': 10,                # Title has geo+naker
+}
+
+GEOGRAPHY = {
+    "STRICT_ANCHORS": [
+        r"\bkota[\s\-]?bandung\b",
+        r"\bpemkot[\s\-]?bandung\b",
+        r"\bwali[\s\-]?kota[\s\-]?bandung\b",
+        r"\bbandung[\s\-]?kota\b",
+        r"\bdprd[\s\-]?kota[\s\-]?bandung\b",
+        r"\bdisnaker[\s\-]?kota[\s\-]?bandung\b",
+        r"\bdisnaker[\s\-]?bandung\b",
+        r"\bpemkot[\s\-]?bdg\b",
+        r"\bkotamadya[\s\-]?bandung\b",
+    ],
+    "DISTRICTS": [
+        r"\bandir\b",
+        r"\bastana[\s\-]?anyar\b",
+        r"\bantapani\b",
+        r"\barcamanik\b",
+        r"\bbabakan[\s\-]?ciparay\b",
+        r"\bbandung[\s\-]?kidul\b",
+        r"\bbandung[\s\-]?kulon\b",
+        r"\bbandung[\s\-]?wetan\b",
+        r"\bbatununggal\b",
+        r"\bbojongloa[\s\-]?kaler\b",
+        r"\bbojongloa[\s\-]?kidul\b",
+        r"\bbuah[\s\-]?batu\b",
+        r"\bcibeunying\b",
+        r"\bcibiru\b",
+        r"\bcicendo\b",
+        r"\bcidadap\b",
+        r"\bcinambo\b",
+        r"\bcoblong\b",
+        r"\bgedebage\b",
+        r"\bkiara[\s\-]?condong\b",
+        r"\blengkong\b",
+        r"\bmandalajati\b",
+        r"\bpanyileukan\b",
+        r"\brancasari\b",
+        r"\bregol\b",
+        r"\bsukajadi\b",
+        r"\bsukasari\b",
+        r"\bsumur[\s\-]?bandung\b",
+        r"\bujung[\s\-]?berung\b",
+    ],
+    "LANDMARKS": [
+        r"\bjl\.?\s?asia\s?afrika\b", r"\bjl\.?\s?dago\b", r"\bjl\.?\s?braga\b",
+        r"\balun[\s\-]?alun\b", r"\bgedung\s?sate\b", r"\btrans\s?studio\b", r"\bgasibu\b",
+    ],
+    "BLACKLIST": [
+        r"\bkabupaten[\s\-]?bandung\b", r"\bkab\.?\s?bandung\b", r"\bsoreang\b",
+        r"\bkbb\b", r"\bbandung[\s\-]?barat\b", r"\blembang\b", r"\bcimahi\b",
+    ],
+}
+
+NAKER_POSITIF = [r"\bbuka lowongan\b", r"\blowongan kerja\b", r"\blowongan pabrik\b", r"\brekrutmen\b", r"\brekrutmen massal\b", r"\brekrutmen terbuka\b", r"\bpenerimaan karyawan\b", r"\bpenerimaan pegawai\b", r"\bpenerimaan tenaga kerja\b", r"\bterima karyawan\b", r"\bjob fair\b", r"\bbursa kerja\b", r"\bbursa kerja khusus\b", r"\bbkk\b", r"\bexpo kerja\b", r"\bpameran kerja\b", r"\bhiring\b", r"\bwe are hiring\b", r"\bdibutuhkan segera\b", r"\bbutuh tenaga\b", r"\bmembuka posisi\b", r"\bkarir terbuka\b", r"\bcareer opportunity\b", r"\bpadat karya\b", r"\bserap tenaga kerja\b", r"\bpenyerapan tenaga kerja\b", r"\bmembuka lapangan kerja\b", r"\btambah karyawan\b", r"\bpenambahan pekerja\b", r"\bpenambahan sdm\b", r"\bpenambahan tenaga\b", r"\bpabrik baru\b", r"\bbuka pabrik\b", r"\bpabrik ekspansi\b", r"\bpeningkatan produksi\b", r"\bpeningkatan kapasitas\b", r"\bekspansi bisnis\b", r"\bproyek infrastruktur\b", r"\binvestasi baru\b", r"\binvestasi pabrik\b", r"\bpelatihan kerja\b", r"\bmagang\b", r"\bpraktek kerja\b", r"\bapprentice\b", r"\bvokasi\b"]
+NAKER_NEGATIF = [r"\bphk\b", r"\bpemutusan hubungan kerja\b", r"\bdirumahkan\b", r"\bpemecatan\b", r"\bdipecat\b", r"\brasionalisasi karyawan\b", r"\brasionalisasi tenaga kerja\b", r"\brasionalisasi\s+sdm\b", r"\bright[\s\-]?sizing\b", r"\bdown[\s\-]?sizing\b", r"\brestrukturisasi organisasi\b", r"\brefisiensi\s?sdm\b", r"\befisiensi\s?sumber\s?daya\s?manusia\b", r"\bpengurangan tenaga kerja\b", r"\bpengurangan karyawan\b", r"\bpenyesuaian struktur\b", r"\boptimalisasi tenaga kerja\b", r"\bpemangkasan\s+pegawai\b", r"\bpemangkasan\s+karyawan\b", r"\breduksi\s+tenaga\s+kerja\b", r"\breduksi\s+sdm\b", r"\btidak diperpanjang kontrak\b", r"\bkontrak tidak dilanjutkan\b", r"\bkontrak habis\b", r"\bkontrak berakhir\b", r"\bberhenti beroperasi\b", r"\bpenutupan operasional\b", r"\bpenghentian produksi\b", r"\bpenghentian operasi\b", r"\bsuspend\s?operasi\b", r"\btutup sementara\b", r"\bpabrik tutup\b", r"\btutup pabrik\b", r"\bgulung tikar\b", r"\bbangkrut\b", r"\bpailit\b", r"\blikuidasi\b", r"\bpenutupan perusahaan\b", r"\bpenutupan pabrik\b", r"\bkurangi karyawan\b", r"\bkurangi tenaga\b", r"\bpemotongan\s?pegawai\b", r"\bpengurangan\s?shift\b", r"\bpemotongan\s?jam\s?kerja\b", r"\bpengurangan\s?jam\s?kerja\b", r"\bgagal panen\b", r"\bpuso\b", r"\bomzet turun drastis\b", r"\bsepi pembeli\b", r"\bsepi order\b", r"\bkehilangan kontrak\b", r"\brelokasi pabrik\b", r"\bpindah pabrik\b"]
+NAKER_ISU = [r"\bupah minimum\b", r"\bump\b", r"\bumk\b", r"\bumr\b", r"\bumkm\b", r"\bgaji\b", r"\bpeningkatan upah\b", r"\bkenaikan upah\b", r"\bupah buruh\b", r"\bupah pekerja\b", r"\btunjangan\b", r"\bthr\b", r"\btunjangan hari raya\b", r"\bbpjs ketenagakerjaan\b", r"\bjamsostek\b", r"\bpesangon\b", r"\buang pesangon\b", r"\bbonus karyawan\b", r"\bdemo buruh\b", r"\bunjuk rasa buruh\b", r"\bpemogokan\b", r"\baksi mogok\b", r"\bmogok kerja\b", r"\bserikat pekerja\b", r"\bserikat buruh\b", r"\boutsourcing\b", r"\bpekerja kontrak\b", r"\bpkwt\b", r"\bpkwtt\b", r"\bkontrak kerja\b", r"\bperjanjian kerja\b", r"\bhak pekerja\b", r"\bkesejahteraan buruh\b", r"\bcuti bersama\b", r"\blembur\b", r"\bk3\b", r"\bkeselamatan kerja\b"]
+NOISE_WORDS = [r"\bpersib\b", r"\bliga\b", r"\bpilkada\b", r"\bcpns\b", r"\bsyarat pendaftaran\b", r"\bgempa\b", r"\bkecelakaan\b", r"\bpembunuhan\b", r"\bnarkoba\b", r"\bbencana\b", r"\bpilkada\b", r"\bkampanye\b", r"\bcapres\b", r"\bcawalkot\b", r"\bpartai\b", r"\bkpu\b", r"\bbawaslu\b", r"\bkampus\b", r"\buniversitas\b", r"\binstitut\b", r"\bpoliteknik\b", r"\bmahasiswa\b", r"\bdosen\b", r"\brektor\b", r"\bwisuda\b", r"\bsnbt\b", r"\bppdb\b", r"\bseminar\b", r"\bwebinar\b", r"\basn\b", r"\bcpns\b", r"\bpppk\b", r"\bmutasi jabatan\b", r"\brotasi jabatan\b", r"\bkinerja asn\b", r"\bsyarat pendaftaran\b", r"\bcara melamar\b", r"\blink pendaftaran\b", r"\bkirim lamaran\b"]
+TITLE_BLACKLIST = ["visi", "misi", "tupoksi", "kontak", "jadwal", "indeks", "pegawai", "sejarah", "gallery", "profil", "bab i", "powerpoint", "open data", "jurnal", "pengumuman", "layanan", "beranda", "home", "index"]
+DOCUMENT_EXTENSIONS = [".pdf", ".doc", ".docx", ".xls", ".xlsx"]
 
 # Source credibility tiers
 # [BUG FIX] Added missing "low" tier that was referenced
@@ -255,6 +330,9 @@ class RelevanceScorer:
         self.penalty_low_wc = penalties.get("low_word_count", -0.2)
         self.penalty_no_date = penalties.get("no_date", -0.1)
         self.penalty_clickbait = penalties.get("clickbait", -0.3)
+        
+        # Inisialisasi V66 Smart Patterns (Precision Senses)
+        self.v66_patterns = self._compile_v66_patterns()
 
         self._stats = {
             "total_scored": 0,
@@ -423,10 +501,10 @@ class RelevanceScorer:
                 logger.debug(f"Regex search error: {e}")
                 continue
 
-        # Check exclusion keywords
-        for kw in EXCLUSION_KEYWORDS:
+        # Check noise keywords
+        for kw in NOISE_WORDS:
             if kw.lower() in text_lower:
-                penalties.append(f"exclusion:{kw}")
+                penalties.append(f"noise:{kw}")
                 penalty += 0.1
 
         return min(penalty, 1.0), penalties
@@ -532,6 +610,82 @@ class RelevanceScorer:
         }
         scored = self.score(article)
         return scored.to_dict()
+
+    # ============================================================
+    # V66 SMART LOGIC — Pindahan dari src/naker_scraper.py
+    # ============================================================
+    def _compile_v66_patterns(self) -> Dict[str, List[re.Pattern]]:
+        """Pre-compile patterns dari V66 untuk performa maksimal."""
+        return {
+            'strict_anchors': [re.compile(p, re.I) for p in GEOGRAPHY['STRICT_ANCHORS']],
+            'districts': [re.compile(p, re.I) for p in GEOGRAPHY['DISTRICTS']],
+            'landmarks': [re.compile(p, re.I) for p in GEOGRAPHY['LANDMARKS']],
+            'blacklist': [re.compile(p, re.I) for p in GEOGRAPHY['BLACKLIST']],
+            'naker_positif': [re.compile(p, re.I) for p in NAKER_POSITIF],
+            'naker_negatif': [re.compile(p, re.I) for p in NAKER_NEGATIF],
+            'naker_isu': [re.compile(p, re.I) for p in NAKER_ISU],
+            'noise': [re.compile(p, re.I) for p in NOISE_WORDS],
+        }
+
+    def calculate_v66_score(self, title: str, url: str, text: str = "") -> Tuple[int, Dict[str, str]]:
+        """Sistem scoring 0-100 murni dari V66 Precision Sentinel."""
+        score = 0
+        breakdown = {}
+        combined = f"{title} {url} {text}".lower()
+
+        # GEOGRAPHIC SCORING (Max 40)
+        if any(p.search(combined) for p in self.v66_patterns['strict_anchors']):
+            score += SCORING_MATRIX['explicit_kota_bandung']
+            breakdown['geo'] = "Explicit Kota Bandung (+40)"
+        elif any(p.search(combined) for p in self.v66_patterns['districts']):
+            score += SCORING_MATRIX['kecamatan_mention']
+            breakdown['geo'] = "Kecamatan Bandung (+30)"
+        elif any(p.search(combined) for p in self.v66_patterns['landmarks']):
+            score += SCORING_MATRIX['bandung_with_context']
+            breakdown['geo'] = "Bandung + Landmark (+35)"
+        elif "bandung" in combined:
+            score += SCORING_MATRIX['bandung_generic']
+            breakdown['geo'] = "Generic Bandung (+20)"
+
+        # NAKER SCORING (Max 40)
+        naker_hits = (
+            sum(1 for p in self.v66_patterns['naker_positif'] if p.search(combined)) +
+            sum(1 for p in self.v66_patterns['naker_negatif'] if p.search(combined)) +
+            sum(1 for p in self.v66_patterns['naker_isu'] if p.search(combined))
+        )
+        if naker_hits >= 3:
+            score += SCORING_MATRIX['naker_explicit_3plus']
+            breakdown['naker'] = f"Naker Strong (+40)"
+        elif naker_hits >= 1:
+            score += SCORING_MATRIX['naker_explicit_1']
+            breakdown['naker'] = "Naker Weak (+20)"
+
+        # PENALTIES
+        if any(p.search(combined) for p in self.v66_patterns['blacklist']):
+            score += SCORING_MATRIX['blacklist_strong']
+            breakdown['penalty'] = "Out of Jurisdiction (-60)"
+            
+        return max(0, min(100, score)), breakdown
+
+    def is_rejected_preflight(self, title: str, url: str) -> Tuple[bool, str]:
+        """Audit cepat sebelum mengunduh seluruh isi artikel (BPS V66 Standard)."""
+        title_lower = title.lower()
+        url_lower = url.lower()
+        
+        # 1. Cek Ekstensi Dokumen
+        if any(url_lower.endswith(ext) for ext in DOCUMENT_EXTENSIONS):
+            return True, "Ekstensi Dokumen Non-Naratif"
+        
+        # 2. Cek Title Blacklist
+        if any(b in title_lower for b in TITLE_BLACKLIST):
+            return True, "Halaman Statis/Administratif"
+        
+        # 3. Quick Score Check (Hanya Judul & URL)
+        score, _ = self.calculate_v66_score(title, url)
+        if score < 30:
+            return True, f"Relevance Score Terlalu Rendah ({score}/100)"
+        
+        return False, f"Pass Pre-flight (Score: {score}/100)"
 
     @property
     def stats(self) -> dict:

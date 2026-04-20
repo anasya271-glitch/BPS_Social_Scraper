@@ -575,22 +575,22 @@ class ArticleParser:
             ),
         }
     
-    def extract_article_content(html: str, url: str, selectors: dict = None) -> dict:
-        """
-        Bridge function to maintain compatibility with NakerSentinel.
-        Wraps ArticleParser class logic into a simple functional call.
-        """
-        from urllib.parse import urlparse
+def extract_article_content(html: str, url: str, selectors: dict = None) -> dict:
+    """
+    Bridge function to maintain compatibility with NakerSentinel.
+    Wraps ArticleParser class logic into a simple functional call.
+    """
+    from urllib.parse import urlparse
         
-        parser = ArticleParser()
-        # Menyiapkan payload sesuai format yang diharapkan oleh kelas ArticleParser
-        article_payload = {
-            "raw_html": html,
-            "url": url,
-            "source": urlparse(url).netloc,
-            "selectors": selectors
-        }
+    parser = ArticleParser()
+    # Menyiapkan payload sesuai format yang diharapkan oleh kelas ArticleParser
+    article_payload = {
+        "raw_html": html,
+        "url": url,
+        "source": urlparse(url).netloc,
+        "selectors": selectors
+    }
         
-        parsed_obj = parser.parse(article_payload)
-        # Mengembalikan hasil dalam bentuk dictionary murni
-        return parsed_obj.to_dict()
+    parsed_obj = parser.parse(article_payload)
+    # Mengembalikan hasil dalam bentuk dictionary murni
+    return parsed_obj.to_dict()

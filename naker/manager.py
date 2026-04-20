@@ -204,6 +204,40 @@ class DataManager:
 
         return saved_files
 
+    def merge_audit_files(self, start_date: str = "", end_date: str = ""):
+        """
+        Menyatukan semua file audit XLSX menjadi satu Master File dengan filter tanggal.
+        """
+        import pandas as pd
+        import re
+        
+        all_files = list(self.output_dir.glob("audit_naker_*.xlsx"))
+        if not all_files:
+            logger.warning(" [!] Tidak ada file audit ditemukan.")
+            return
+
+        filtered_files = []
+        for f in all_files:
+            # Ekstrak tanggal YYYYMMDD dari nama file
+            match = re.search(r"(\d{8})", f.name)
+            if match:
+                file_date = match.group(1)
+                if start_date and file_date < start_date.replace("-", ""): continue
+                if end_date and file_date > end_date.replace("-", ""): continue
+            filtered_files.append(f)
+
+        if not filtered_files:
+            logger.warning(f" [!] Tidak ada file dalam rentang {start_date} s/d {end_date}")
+            return
+
+        logger.info(f" [>] Menggabungkan {len(filtered_files)} file...")
+        df_list = [pd.read_excel(f) for f in filtered_files]
+        master_df = pd.concat(df_list, ignore_index=True).drop_duplicates(subset=['url'])
+        
+        output_path = self.output_dir / f"MASTER_AUDIT_NAKER_{datetime.now().strftime('%Y%m%d_%H%M')}.xlsx"
+        master_df.to_excel(output_path, index=False)
+        logger.info(f" [+] Master File berhasil dibuat: {output_path}")
+
     def _save_csv(self, data: list[dict], path: Path):
         """Flatten and save as CSV."""
         if not data:
