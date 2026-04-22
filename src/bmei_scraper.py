@@ -53,6 +53,8 @@ class BPS_BMEI_Sentinel:
         os.makedirs(self.export_dir, exist_ok=True)
         
         self.session_data = []
+        self.session_timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        self.checkpoint_path = self.export_dir / f"bmei_audit_{self.session_timestamp}.xlsx"
         
         self.permanent_visited_urls = set()
         self.session_active_urls = set()
@@ -423,7 +425,13 @@ class BPS_BMEI_Sentinel:
             task_log.append(f"\n [>] Mengekstraksi [{site}]: {entry.title[:50]}...")
             
             page = await context.new_page()
-            await page.route("**/*", self.network_interceptor)
+
+            async def block_media(route):
+                if route.request.resource_type in ["image", "media", "font", "stylesheet"]:
+                    await route.abort()
+                else:
+                    await route.continue_()
+            await page.route("**/*", block_media)
             
             pacing_type = "fast"
             try:
@@ -487,6 +495,7 @@ class BPS_BMEI_Sentinel:
                                 "Teks": purified_text[:1500] 
                             })
                             task_log.append(f"     [SECURED] Lolos audit BPS & SLM. {link_text}")
+                            self.save_checkpoint()
                             pacing_type = "normal" 
                             await self._commit_to_permanent_blacklist(real_url)
                         else:
@@ -543,6 +552,7 @@ class BPS_BMEI_Sentinel:
             real_url = self._decode_google_url(entry.link)
             if real_url in self.permanent_visited_urls:
                 cached_count += 1
+                print(f" [>] Target sudah diaudit sebelumnya, melewati: {entry.title[:50]}... ({real_url})")
             else:
                 new_targets.append((site, entry, real_url))
                 
@@ -564,13 +574,19 @@ class BPS_BMEI_Sentinel:
                     args=["--disable-blink-features=AutomationControlled"]
                 )
 
-                batch_size = 5
-                for i in range(0, len(new_targets), batch_size):
-                    batch = new_targets[i:i+batch_size]
-                    tasks = [self.process_article(context, entry, site, real_url) for site, entry, real_url in batch]
-                    await asyncio.gather(*tasks, return_exceptions=True)
-                    await asyncio.sleep(1.5)
+                from collections import defaultdict
+                site_groups = defaultdict(list)
 
+                for s, e, u in new_targets:
+                    site_groups[s].append((s, e, u))
+                
+                for site, items in site_groups.items():
+                    print(f"\n[>>>] Memproses situs: {site.upper()} dengan {len(items)} Artikel")
+                    tasks = [self.process_article(context, e, s, u) for e, u in items]
+                    await asyncio.gather(*tasks, return_exceptions=True)
+
+                    await asyncio.sleep(random.uniform(1.5, 2.0))
+                    
         except KeyboardInterrupt:
             print("\n\n[!] INTERUPSI (CTRL+C) TERDETEKSI. Mengamankan data dengan tenang...")
         except Exception as e:
