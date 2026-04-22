@@ -204,6 +204,25 @@ class DataManager:
 
         return saved_files
 
+    def load_visited_urls(self) -> set:
+        """Memuat daftar URL yang sudah pernah diproses dari sesi-sesi sebelumnya."""
+        visited_file = self.output_dir / "visited_naker_urls.txt"
+        if not visited_file.exists():
+            return set()
+        with open(visited_file, "r", encoding="utf-8") as f:
+            return set(line.strip() for line in f if line.strip())
+
+    def save_visited_urls_delta(self, new_urls: set):
+        """Menyimpan sinkronisasi URL baru ke dalam memori permanen secara aman."""
+        if not new_urls:
+            return
+        visited_file = self.output_dir / "visited_naker_urls.txt"
+        existing = self.load_visited_urls()
+        combined = existing.union(new_urls)
+        with open(visited_file, "w", encoding="utf-8") as f:
+            for url in sorted(combined):
+                f.write(f"{url}\n")
+
     def merge_audit_files(self, start_date: str = "", end_date: str = ""):
         """
         Menyatukan semua file audit XLSX menjadi satu Master File dengan filter tanggal.

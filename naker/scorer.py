@@ -681,11 +681,20 @@ class RelevanceScorer:
             return True, "Halaman Statis/Administratif"
         
         # 3. Quick Score Check (Hanya Judul & URL)
-        score, _ = self.calculate_v66_score(title, url)
-        if score < 30:
-            return True, f"Relevance Score Terlalu Rendah ({score}/100)"
+        quick_score = 0
+        combined = f"{title_lower} {url_lower}"
         
-        return False, f"Pass Pre-flight (Score: {score}/100)"
+        if any(re.search(r'\b' + re.escape(kw) + r'\b', combined) for kw in PRIMARY_KEYWORDS):
+            quick_score += SCORING_MATRIX['naker_primary']
+            
+        if any(re.search(r'\b' + re.escape(kw) + r'\b', combined) for kw in SECONDARY_KEYWORDS):
+            quick_score += SCORING_MATRIX['naker_secondary']
+            
+        # MELONGGARKAN AMBANG BATAS: Turun dari 20 ke 10 agar berita ekonomi makro (Sekunder) tidak terbuang
+        if quick_score < 10:
+            return True, f"Relevance Score Terlalu Rendah ({quick_score}/100)"
+            
+        return False, ""
 
     @property
     def stats(self) -> dict:

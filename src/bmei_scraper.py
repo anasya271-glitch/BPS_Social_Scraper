@@ -17,7 +17,10 @@ from newspaper import Article, Config
 from playwright.async_api import async_playwright, TimeoutError, Error as PlaywrightError
 from urllib.parse import urlparse, urlencode, parse_qs, urlunparse
 import warnings
-from src.ai_engine import BPS_AI_Engine
+try:
+    from src.ai_engine import BPS_AI_Engine
+except ModuleNotFoundError:
+    from ai_engine import BPS_AI_Engine
 
 warnings.filterwarnings("ignore")
 

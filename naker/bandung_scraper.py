@@ -961,11 +961,17 @@ class BandungScraper:
         matrix_results = await asyncio.gather(*all_tasks)
         
         seen_urls = set()
+        seen_titles = set()
         final_entries = []
-        for group in matrix_results:
-            for item in group:
-                if item["url"] not in seen_urls:
+        
+        for result_group in matrix_results:
+            for item in result_group:
+                # Normalisasi judul untuk mencegah lolosnya artikel identik akibat URL Masking Google
+                clean_title = " ".join(item["title"].lower().split())
+                
+                if item["url"] not in seen_urls and clean_title not in seen_titles:
                     seen_urls.add(item["url"])
+                    seen_titles.add(clean_title)
                     final_entries.append(item)
                     
         return final_entries
@@ -988,13 +994,25 @@ class BandungScraper:
         return res
 
     def prepare_workspace(self):
-        """Sinkronisasi ruang isolasi browser (Standard V66)."""
-        logger.info(" [>] Sinkronisasi Ruang Isolasi Browser...")
+        """Sinkronisasi Ruang Isolasi (V66 Fast-Boot)."""
+        logger.info(" [>] Sinkronisasi Ruang Isolasi (Mengabaikan Cache Raksasa)...")
         source = Path(self.edge_source_dir) / "Default"
         target = self.workspace_dir / "Default"
-        if target.exists(): shutil.rmtree(target, ignore_errors=True)
-        try: shutil.copytree(source, target, ignore=shutil.ignore_patterns("SingletonLock", "lock"))
-        except: pass
+        
+        if target.exists(): 
+            shutil.rmtree(target, ignore_errors=True)
+            
+        try: 
+            # Mengecualikan folder cache bergiga-giga untuk mempercepat booting (Selective Cloning)
+            ignore_list = shutil.ignore_patterns(
+                "SingletonLock", "lock", "Cache", "Code Cache", 
+                "Service Worker", "Media Cache", "GPUCache", 
+                "DawnCache", "Crashpad", "VideoDecodeStats"
+            )
+            shutil.copytree(source, target, ignore=ignore_list)
+            logger.info(" [+] Sinkronisasi Selesai. Booting Playwright...")
+        except Exception as e: 
+            logger.debug(f" Minor copy issue (Aman diabaikan): {e}")
 
     def _decode_google_url(self, url: str) -> str:
         """Menerjemahkan link Google News menjadi URL asli."""
@@ -1066,69 +1084,58 @@ class BandungScraper:
                 await asyncio.sleep(2)
         raise Exception("Max retries exceeded")
 
-    async def fetch_all_articles(self, articles: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
-        """Tahap 2 Sentinel: Mengunduh konten menggunakan Playwright."""
+    async def start_browser(self):
+        """Membuka browser Edge agar standby untuk dipanggil satu per satu."""
         self.prepare_workspace()
-        results = []
-        
-        async with async_playwright() as p:
-            context = await p.chromium.launch_persistent_context(
-                user_data_dir=str(self.workspace_dir),
-                channel="msedge",
-                headless=True,
-                args=["--disable-blink-features=AutomationControlled"]
-            )
-            
-            # Membatasi batch ke 10 agar RAM PC kantor Anda (16GB) tidak kepenuhan
-            batch_size = 10
-            for i in range(0, len(articles), batch_size):
-                batch = articles[i:i+batch_size]
-                tasks = [self._process_single_article(context, art) for art in batch]
-                batch_results = await asyncio.gather(*tasks)
-                results.extend(batch_results)
-                
-            await context.close()
-            
-        return results
+        from playwright.async_api import async_playwright
+        self.playwright_instance = await async_playwright().start()
+        self.context = await self.playwright_instance.chromium.launch_persistent_context(
+            user_data_dir=str(self.workspace_dir),
+            channel="msedge",
+            headless=False,
+            viewport={"width": 1280, "height": 720},
+            args=["--disable-blink-features=AutomationControlled"]
+        )
 
-    async def _process_single_article(self, context, article_data: Dict[str, Any]) -> Dict[str, Any]:
-        """Tugas tunggal mengunduh HTML dari URL."""
-        url = article_data["url"]
+    async def close_browser(self):
+        """Menutup browser secara aman saat pipeline selesai."""
+        if hasattr(self, 'context') and self.context:
+            await self.context.close()
+        if hasattr(self, 'playwright_instance') and self.playwright_instance:
+            await self.playwright_instance.stop()
+
+    async def fetch_single_article(self, url: str) -> Dict[str, Any]:
+        """Mengunduh 1 artikel secara On-Demand (Gaya LNPRT/BMEI)."""
+        article_data = {"url": url, "fetch_success": False, "html": "", "error": ""}
         
         # Pre-flight MIME check
         is_html, _ = await asyncio.to_thread(self.verify_mime_type, url)
         if not is_html:
-            article_data["fetch_success"] = False
             return article_data
 
-        async with self.browser_semaphore:
-            page = await context.new_page()
-            await page.route("**/*", self.network_interceptor)
+        page = await self.context.new_page()
+        try:
+            await self.fetch_with_backoff(page, url)
+            await page.wait_for_timeout(2000)
+            
             try:
-                await self.fetch_with_backoff(page, url)
-                await page.wait_for_timeout(2000)
-                
-                # Cek Cloudflare (V66 Tactic)
-                try:
-                    iframe = await page.wait_for_selector('iframe[src*="cloudflare"], #challenge-running', timeout=4000)
-                    if iframe:
-                        await page.wait_for_function(
-                            "document.querySelector('iframe[src*=\"cloudflare\"]') === null && document.querySelector('#challenge-running') === null",
-                            timeout=60000
-                        )
-                except: pass
-                
-                await self.execute_hydration_scroll(page)
-                html_content = await page.content()
-                
-                article_data["html"] = html_content
-                article_data["fetch_success"] = True
-            except Exception as e:
-                article_data["fetch_success"] = False
-                article_data["error"] = str(e)
-            finally:
-                if not page.is_closed(): await page.close()
-                
+                iframe = await page.wait_for_selector('iframe[src*="cloudflare"], #challenge-running', timeout=4000)
+                if iframe:
+                    logger.warning(f" [!] Cloudflare terdeteksi pada {url[:40]}... Menunggu resolusi 15s.")
+                    await page.wait_for_function(
+                        "document.querySelector('iframe[src*=\"cloudflare\"]') === null && document.querySelector('#challenge-running') === null",
+                        timeout=15000
+                    )
+            except: pass
+            
+            await self.execute_hydration_scroll(page)
+            article_data["html"] = await page.content()
+            article_data["fetch_success"] = True
+        except Exception as e:
+            article_data["error"] = str(e)
+        finally:
+            if not page.is_closed(): await page.close()
+            
         return article_data
 
 if __name__ == "__main__":

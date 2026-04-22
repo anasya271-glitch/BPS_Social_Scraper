@@ -118,26 +118,37 @@ class NakerSentinel:
                 logger.warning(f"Could not open log file '{log_file}': {e}")
 
     async def stage_scrape(self) -> List[Dict[str, Any]]:
-        """Stage 1: Discover and fetch articles from all sources."""
-        logger.info("=" * 50)
+        """Stage 1: Discover, Deduplicate, and Fetch articles from all sources."""
+        logger.info("==================================================")
         logger.info("STAGE 1: SCRAPE — Discovering and fetching articles")
-        logger.info("=" * 50)
-
+        logger.info("==================================================")
+        
         t0 = datetime.now(timezone.utc)
-
-        # Discover article URLs
+        
+        # 1. Discover articles dari radar Google
         discovered = await self.scraper.discover_articles()
-        logger.info(f"Discovered {len(discovered)} unique article URLs.")
-
-        if not discovered:
-            logger.warning("No articles discovered. Pipeline may produce empty results.")
-            self.stats["stage_scrape"] = {"discovered": 0, "fetched": 0, "success": 0, "duration_s": 0}
+        
+        # 2. Cross-Session Deduplication (Filter Memori)
+        visited_urls = self.manager.load_visited_urls()
+        new_articles = [art for art in discovered if art["url"] not in visited_urls]
+        
+        logger.info(f"Total Temuan: {len(discovered)} | Sudah Diproses (Dibuang): {len(discovered)-len(new_articles)} | Target Unduh: {len(new_articles)}")
+        
+        # Jika tidak ada artikel baru, hentikan dengan mencatat statistik
+        if not new_articles:
+            logger.warning("Tidak ada artikel baru yang ditemukan. Pipeline dihentikan efisien.")
+            duration = (datetime.now(timezone.utc) - t0).total_seconds()
+            self.stats["stage_scrape"] = {
+                "discovered": len(discovered),
+                "fetched": 0, "success": 0, "failed": 0, "duration_s": round(duration, 2)
+            }
             return []
-
-        # Fetch full HTML for each article
-        fetched = await self.scraper.fetch_all_articles(discovered)
+            
+        # 3. Hanya unduh artikel yang benar-benar baru
+        fetched = await self.scraper.fetch_all_articles(new_articles)
         successful = [a for a in fetched if a.get("fetch_success")]
 
+        # 4. Pencatatan Statistik (Instrumentation)
         duration = (datetime.now(timezone.utc) - t0).total_seconds()
         self.stats["stage_scrape"] = {
             "discovered": len(discovered),
@@ -147,7 +158,7 @@ class NakerSentinel:
             "duration_s": round(duration, 2),
         }
 
-        logger.info(f"Fetched {len(successful)}/{len(fetched)} articles in {duration:.1f}s.")
+        logger.info(f"Berhasil mengunduh {len(successful)}/{len(fetched)} artikel dalam {duration:.1f} detik.")
         self.raw_articles = successful
         return successful
 
@@ -425,58 +436,132 @@ class NakerSentinel:
         return saved_count
 
     async def run(self):
-        """Execute the full pipeline sequentially."""
+        """Eksekusi Streaming Pipeline (Site-by-Site, Analisis Real-time & Checkpoint)."""
+        from collections import defaultdict
+        
         self.start_time = datetime.now(timezone.utc)
-        logger.info("NAKER SENTINEL pipeline starting...")
-        logger.info(f"Start time: {self.start_time.isoformat()}")
+        logger.info("NAKER SENTINEL pipeline starting (Streaming Mode)...")
+        
+        # 1. Discover & Filter Memori
+        raw_discovered = await self.scraper.discover_articles()
+        visited_urls = self.manager.load_visited_urls()
+        
+        # 2. Kelompokkan Berdasarkan Situs (Memproses 1 site sampai beres, baru pindah)
+        site_groups = defaultdict(list)
+        for art in raw_discovered:
+            if art["url"] not in visited_urls:
+                site_groups[art["site"]].append(art)
+                
+        total_targets = sum(len(v) for v in site_groups.values())
+        if total_targets == 0:
+            logger.info(" [!] Tidak ada artikel baru. Selesai.")
+            return
 
+        logger.info(f" [>] Membidik {total_targets} artikel baru dari {len(site_groups)} situs.")
+        
+        # 3. Nyalakan Browser
+        await self.scraper.start_browser()
+        final_articles = []
+        checkpoint_count = 0
+        
         try:
-            # Stage 1: Scrape
-            raw = await self.stage_scrape()
-            if not raw:
-                logger.warning("No articles scraped. Pipeline ends early.")
-                return
+            for site, articles in site_groups.items():
+                print(f"\n[>>>] MEMPROSES SITUS: {site.upper()} ({len(articles)} Artikel)")
+                
+                for art in articles:
+                    title_short = art["title"][:55]
+                    url = art["url"]
+                    clickable_link = f"\033]8;;{url}\033\\[BACA ARTIKEL]\033]8;;\033\\"
+                    
+                    try:
+                        # 1. PRE-FLIGHT CHECK (Mencegah buang-buang kuota internet)
+                        rejected, reason = self.scorer.is_rejected_preflight(art["title"], url)
+                        if rejected:
+                            print(f" -> {title_short}...")
+                            print(f"    [BLOCKED PRE-FLIGHT] {reason}. {clickable_link}")
+                            continue
 
-            # Stage 2: Parse
-            parsed = self.stage_parse(raw)
-            if not parsed:
-                logger.warning("No articles parsed successfully. Pipeline ends early.")
-                return
+                        print(f" [>] Mengekstraksi [{site}]: {title_short}...")
 
-            # Stage 3: Score
-            scored = self.stage_score(parsed)
-
-            # Stage 4: Filter
-            filtered = self.stage_filter(scored)
-            if not filtered:
-                logger.warning("All articles filtered out. Nothing to save.")
-                return
-
-            # Stage 5: Interrogate — Sequential Processing untuk menjaga VRAM GPU 1630 Anda
-            logger.info("=" * 50)
-            logger.info("STAGE 5: INTERROGATE — Deep AI Analysis (Sequential)")
-            logger.info("=" * 50)
-            
-            interrogated_list = []
-            for art in filtered:
-                # Memproses satu per satu agar tidak terjadi VRAM Overflow
-                result = self.stage_interrogate(art)
-                interrogated_list.append(result)
-            
-            self.interrogated_articles = interrogated_list
-
-            # Stage 6: Save
-            self.stage_save(interrogated_list)
-
+                        # 2. FETCH HTML
+                        html_data = await self.scraper.fetch_single_article(url)
+                        if not html_data.get("fetch_success"):
+                            print(f"     [FAILED] Gagal mengunduh halaman atau Timeout. {clickable_link}")
+                            continue
+                            
+                        # 3. PARSE
+                        parsed = extract_article_content(html_data["html"], url)
+                        text_content = parsed.get("text", "")
+                        if not text_content or len(text_content) < 150:
+                            print(f"     [SKIPPED] Konten terlalu pendek atau dilindungi paywall. {clickable_link}")
+                            continue
+                            
+                        # 4. PREFLIGHT SCORE
+                        score, breakdown = self.scorer.calculate_v66_score(parsed.get("title", ""), url, text_content)
+                        if score < 20: 
+                            # Mengambil alasan dari breakdown (misal: "Noise/Kriminal (-30)")
+                            skip_reason = list(breakdown.values())[0] if breakdown else "Tidak ada indikator ketenagakerjaan kuat"
+                            print(f"     [SKIPPED] {skip_reason}. {clickable_link}")
+                            continue
+                            
+                        # 5. AI INTERROGATE (Lolos semua filter, AI dipanggil)
+                        truncated = text_content[:1500] 
+                        ai_result = self.ai_engine.classify_naker(truncated)
+                        
+                        # LOG ISOLATED (Lengkap dengan kotak)
+                        self._print_isolated_log(site, parsed.get("title", ""), url, score, ai_result)
+                        
+                        # SIMPAN & CHECKPOINT
+                        final_data = {**art, **parsed, "score": score, **ai_result}
+                        final_articles.append(final_data)
+                        self.manager.save_visited_urls_delta({url})
+                        
+                        checkpoint_count += 1
+                        if checkpoint_count % 5 == 0:
+                            self.manager.save_final(final_articles)
+                            print(f"  [√] Incremental Checkpoint tersimpan ({checkpoint_count} artikel).")
+                            
+                    except Exception as loop_e:
+                        # Menangkap error di level artikel agar pipeline tidak mati total
+                        print(f"     [ERROR] Insiden pada eksekusi artikel: {loop_e}. {clickable_link}")
+                        # Jika context tertutup, bersihkan sisa memori sebelum me-restart browser
+                        if "Target page, context or browser has been closed" in str(loop_e):
+                            print(f"     [!] Browser Context mati. Mencoba me-restart browser untuk situs selanjutnya...")
+                            try:
+                                await self.scraper.close_browser()
+                            except:
+                                pass # Abaikan jika sudah terlanjur mati
+                            import asyncio
+                            await asyncio.sleep(2) # Beri jeda 2 detik agar sistem operasi melepas file lock Edge
+                            await self.scraper.start_browser()
+                        
+        except KeyboardInterrupt:
+            logger.warning("\n[!] INTERUPSI (CTRL+C). Mengamankan data dengan tenang...")
         except Exception as e:
-            logger.critical(f"Pipeline failed with unhandled error: {e}", exc_info=True)
+            logger.error(f"Error Pipeline: {e}")
         finally:
-            self.end_time = datetime.now(timezone.utc)
-            total_s = (self.end_time - self.start_time).total_seconds()
-            logger.info(f"Pipeline finished in {total_s:.1f}s.")
+            await self.scraper.close_browser()
+            if final_articles:
+                self.manager.save_final(final_articles)
+                logger.info(f"Pipeline selesai. Master data berisi {len(final_articles)} hasil audit tersimpan.")
 
-            summary = self._build_summary()
-            self._print_summary(summary)
+    def _print_isolated_log(self, site: str, title: str, url: str, score: int, ai_result: dict):
+        """Mencetak log eksklusif dengan ANSI Escape Sequence untuk Clickable Link."""
+        geo = ai_result.get("status_geografi", "Unknown")
+        kbli = ai_result.get("kategori_kbli", "N/A")
+        ringkasan = ai_result.get("ringkasan_berita", "-")
+        
+        # ANSI Escape Sequence: Membuat teks terminal bisa di-klik pada VS Code / Windows Terminal
+        clickable_link = f"\033]8;;{url}\033\\[BACA ARTIKEL]\033]8;;\033\\"
+        
+        print(f"\n" + "="*70)
+        print(f"[+] SUMBER  : {site}")
+        print(f"[-] JUDUL   : {title[:80]}...")
+        print(f"[-] URL     : {clickable_link} -> {url[:40]}...")
+        print(f"[>] SKOR    : {score}/100")
+        print(f"[A] AI AUDIT: {geo} | KBLI: {kbli[:30]}")
+        print(f"    Ringkas : {ringkasan}")
+        print("="*70)
 
     def _build_summary(self) -> Dict[str, Any]:
         """Build a structured summary dict of the entire run."""

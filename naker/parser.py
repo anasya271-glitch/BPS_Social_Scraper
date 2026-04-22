@@ -575,22 +575,54 @@ class ArticleParser:
             ),
         }
     
-def extract_article_content(html: str, url: str, selectors: dict = None) -> dict:
+def extract_article_content(html_content: str, url: str) -> dict:
     """
-    Bridge function to maintain compatibility with NakerSentinel.
-    Wraps ArticleParser class logic into a simple functional call.
+    Ekstraksi teks dengan Fallback Multi-Layer (Standard BPS V66).
+    Tahan terhadap DOM kompleks dari Pikiran Rakyat & Ayo Bandung.
     """
-    from urllib.parse import urlparse
-        
-    parser = ArticleParser()
-    # Menyiapkan payload sesuai format yang diharapkan oleh kelas ArticleParser
-    article_payload = {
-        "raw_html": html,
-        "url": url,
-        "source": urlparse(url).netloc,
-        "selectors": selectors
-    }
-        
-    parsed_obj = parser.parse(article_payload)
-    # Mengembalikan hasil dalam bentuk dictionary murni
-    return parsed_obj.to_dict()
+    from newspaper import Article
+    from bs4 import BeautifulSoup
+    
+    parsed_data = {"title": "", "text": ""}
+    
+    # Lapis 1: Standar Ekstraksi Nasional (Newspaper3k)
+    try:
+        article = Article(url)
+        article.set_html(html_content)
+        article.parse()
+        parsed_data["title"] = article.title
+        parsed_data["text"] = article.text.strip()
+    except:
+        pass
+
+    # Lapis 2: Robust DOM Parsing untuk Jaringan Promedia (Pikiran Rakyat, Ayo Bandung)
+    if not parsed_data["text"] or len(parsed_data["text"]) < 150:
+        try:
+            soup = BeautifulSoup(html_content, "html.parser")
+            
+            # Ekstraksi judul darurat
+            if not parsed_data["title"]:
+                title_tag = soup.find('h1')
+                parsed_data["title"] = title_tag.get_text(strip=True) if title_tag else "Tanpa Judul"
+
+            # Membidik kontainer berita spesifik media lokal Jawa Barat
+            content_div = soup.find('div', class_='read__content') or \
+                          soup.find('div', class_='detail__body') or \
+                          soup.find('div', class_='post-content') or \
+                          soup.find('article')
+            
+            if content_div:
+                # Membersihkan elemen pengganggu (iklan, skrip, tagar)
+                for tag in content_div(['script', 'style', 'iframe', 'ins', 'a']):
+                    tag.decompose()
+                
+                # Menggabungkan sisa teks menjadi narasi bersih
+                parsed_data["text"] = content_div.get_text(separator=' ', strip=True)
+                
+                # Membersihkan spasi berlebih
+                import re
+                parsed_data["text"] = re.sub(r'\s+', ' ', parsed_data["text"]).strip()
+        except Exception as e:
+            pass
+            
+    return parsed_data
