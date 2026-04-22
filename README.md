@@ -161,9 +161,8 @@ Proyek ini akan terus berkembang:
 
 - [x] **Fase 1**: Mesin Scraping Inti (Instagram & News).
 - [x] **Fase 2**: Integrasi AI Lokal (Ollama).
-- [ ] **Fase 3**: Llama Stack
-- [ ] **Fase 4**: Sistem Deteksi Anomali Otomatis.
-- [ ] **Fase 5**: Visualisasi Dashboard (Seaborn/Matplotlib integration).
+- [ ] **Fase 3**: Sistem Deteksi Anomali Otomatis.
+- [ ] **Fase 4**: Visualisasi Dashboard (Seaborn/Matplotlib integration).
 
 ----
 
@@ -174,7 +173,7 @@ Proyek ini akan terus berkembang:
 | :--- | :--- | :--- | :--- |
 | ***Investigation*** | `bmei_scraper.py` | Flagship tool dengan integrasi Ollama. | Audit fenomena berita Ekspor/Impor Bandung. |
 | | `lnprt_scraper.py` | Versi adaptasi untuk sektor lembaga sosial. | Mendeteksi hibah, donasi internasional, dan aktivitas LNPRT. |
-| | `naker_scraper.py` | Versi adaptasi untuk sektor ketenagakerjaan. | Mendeteksi PHK, upah, penyerapan tenaga kerja. |
+| | `naker/sentinel.py` | Versi adaptasi (pipeline) untuk sektor ketenagakerjaan. | Mendeteksi PHK, upah, penyerapan tenaga kerja. |
 | | `instagram_scraper.py` | Monitoring akun asosiasi & pelaku usaha. | Menangkap sentimen pasar dan tren logistik dari tangan pertama. |
 | | `g4wb_scraper.py` | Ekstraktor data go4WorldBusiness. | Mencari profil eksportir dan importir aktif di wilayah Bandung. |
 | | `BoL_scraper.py` | Pengambil data *Bill of Lading*. | Validasi arus barang fisik melalui dokumen pengapalan global. |
@@ -267,6 +266,12 @@ ganti juga YYYY-MM-DD dengan rentang waktu yang diinginkan. contoh:
 python src/bmei_scraper.py --mode history --start 2026-01-01 --end 2026-01-30
 ```
 
+Untuk menyatukan data file dari rentang waktu tertentu, bisa gunakan:
+
+```bash
+python src/nama_scraper.py --merge --start YYYY-MM-DD --end YYYY-MM-DD
+```
+
 ### B. Monitoring Akun Instagram Spesifik
 
 ```bash
@@ -296,6 +301,11 @@ python src/instagram_scraper.py --target username_akun
 
  * **Isi:** Berkas `.xlsx` yang sudah matang.
   * **Peran:** Ini adalah produk akhir dari `lnprt_scraper.py'. Berisi rangkuman anomali, skor relevansi, tanggal berita, url berita, dan teks berita yang sudah dibersihkan dari elemen iklan oleh fungsi Ad-Killer. Adapun database `BPS_Social_Scraper/visited_urls.txt` berguna untuk mencegah pemrosesan ganda (Deduplikasi).
+
+#### 📂 `naker/data/exports/`
+
+ * **Isi:** Berkas `.xlsx` yang sudah matang.
+  * **Peran:** Ini adalah produk akhir dari `sentinel.py'. Berisi rangkuman anomali, skor relevansi, tanggal berita, url berita, dan teks berita yang sudah dibersihkan dari elemen iklan oleh fungsi Ad-Killer. Adapun database `BPS_Social_Scraper/naker/visited_urls.txt` berguna untuk mencegah pemrosesan ganda (Deduplikasi).
     
 #### 📂 `data/edge_workspace/`
 
