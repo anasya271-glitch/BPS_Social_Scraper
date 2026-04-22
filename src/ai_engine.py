@@ -12,10 +12,6 @@ class BPS_AI_Engine:
             "bmei": "bmei-auditor"
         }
 
-    def audit_bmei(self, prompt: str) -> dict:
-        """Eksekusi LLM Khusus untuk audit BMEI dengan prompt yang sudah dirancang khusus."""
-        return self._execute_query("bps-bmei", prompt)
-
     def _execute_query(self, model_key, custom_prompt):
         """Transport layer untuk mengirim prompt ke Ollama."""
         try:
@@ -85,10 +81,8 @@ SEKARANG ANALISIS TEKS BERIKUT:
 """
         return self._execute_query("bps-naker", v66_prompt)
 
-    def classify_lnprt(self, text):
-        """Digunakan oleh lnprt_scraper.py"""
+    def interrogate_lnprt(self, text):
         return self._interrogate_model(self.models["lnprt"], text)
 
-    def audit_bmei(self, text):
-        """Digunakan oleh bmei_scraper.py"""
-        return self._interrogate_model(self.models["bmei"], text)
+    def audit_bmei(self, prompt: str) -> dict:
+        return self._execute_query("bps-bmei", prompt)
