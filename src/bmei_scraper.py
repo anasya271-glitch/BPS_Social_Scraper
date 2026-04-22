@@ -301,22 +301,22 @@ class BPS_BMEI_Sentinel:
         has_commodity = any(re.search(c, combined) for c in self.config["COMMODITIES"])
         has_trade = has_trade_intl or (has_trade_domestic and has_commodity)
 
-        is_noise = any(re.search(n, combined) for n in self.config["NOISE_WORDS"])
-        
-        if is_noise and not (has_strong_anchor and has_trade): 
-            return False, "Terdeteksi Noise Akademis/Kriminal/Bencana/Birokrasi (Tanpa Anchor Dagang Kuat)"
-        
+        if not has_strict_geo:
+            return False, "Gagal Geofencing: Tidak Menyebut Kota Bandung atau Distriknya"
+
         is_blacklisted = any(re.search(b, combined) for b in self.config["GEOGRAPHY"]["BLACKLIST"])
         if is_blacklisted and not has_strong_anchor: 
             return False, "Fokus ke Wilayah/Provinsi Lain (Tanpa Entitas Kuat Kota Bandung)"
 
-        if not has_strict_geo: 
-            return False, "Gagal Geofencing (Tidak eksplisit menyebut Kota Bandung)"
+        is_noise = any(re.search(n, combined) for n in self.config["NOISE_WORDS"])
+        
+        if is_noise and not (has_strong_anchor and has_trade): 
+            return False, "Terdeteksi Noise Akademis/Kriminal/Bencana/Birokrasi (Tanpa Anchor Dagang Kuat)"
 
         if has_trade: 
             return True, "Lolos Leksikal: Perdagangan/Logistik Komoditas"
             
-        return False, "Lolos Geografi, namun miskin indikator BPS"
+        return True, "Lolos Geografi, namun miskin indikator BPS"
 
     def smart_truncate(self, text):
         text_lower = text.lower()
@@ -331,6 +331,9 @@ class BPS_BMEI_Sentinel:
             return first_chunk + "\n\n...[POTONGAN BUKTI LOKASI]...\n\n" + second_chunk
         else:
             return text[:1500]
+
+    def audit_bmei(self, prompt: str) -> dict:
+        return self._execute_query("bps-bmei", prompt)
 
     async def interrogate_with_llama(self, article_text, task_log):
         truncated_text = self.smart_truncate(article_text)
@@ -562,7 +565,7 @@ class BPS_BMEI_Sentinel:
                 )
 
                 tasks = [self.process_article(context, entry, site, real_url) for site, entry, real_url in new_targets]
-                await asyncio.gather(*tasks)
+                await asyncio.gather(*tasks, return_exceptions=True)
 
         except KeyboardInterrupt:
             print("\n\n[!] INTERUPSI (CTRL+C) TERDETEKSI. Mengamankan data dengan tenang...")
