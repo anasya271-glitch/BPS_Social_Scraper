@@ -12,6 +12,10 @@ class BPS_AI_Engine:
             "bmei": "bmei-auditor"
         }
 
+    def audit_bmei(self, prompt: str) -> dict:
+        """Eksekusi LLM Khusus untuk audit BMEI dengan prompt yang sudah dirancang khusus."""
+        return self._execute_query("bps-bmei", prompt)
+
     def _execute_query(self, model_key, custom_prompt):
         """Transport layer untuk mengirim prompt ke Ollama."""
         try:

@@ -332,9 +332,6 @@ class BPS_BMEI_Sentinel:
         else:
             return text[:1500]
 
-    def audit_bmei(self, prompt: str) -> dict:
-        return self._execute_query("bps-bmei", prompt)
-
     async def interrogate_with_llama(self, article_text, task_log):
         truncated_text = self.smart_truncate(article_text)
         task_log.append("     [>] Mengirim Smart Context Window ke SLM (Ollama)...")
