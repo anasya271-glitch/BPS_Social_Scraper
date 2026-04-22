@@ -422,6 +422,7 @@ class BPS_BMEI_Sentinel:
                 return
 
             published_date = entry.get("published", "Tanggal Tidak Tersedia")
+            print(f" [*] Membedah: {entry.title[:50]}...", flush=True)
             task_log.append(f"\n [>] Mengekstraksi [{site}]: {entry.title[:50]}...")
             
             page = await context.new_page()
