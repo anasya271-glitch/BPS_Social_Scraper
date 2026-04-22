@@ -85,4 +85,4 @@ SEKARANG ANALISIS TEKS BERIKUT:
         return self._interrogate_model(self.models["lnprt"], text)
 
     def audit_bmei(self, prompt: str) -> dict:
-        return self._execute_query("bps-bmei", prompt)
+        return self._execute_query("bmei", prompt)

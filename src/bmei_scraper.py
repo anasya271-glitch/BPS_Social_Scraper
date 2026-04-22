@@ -561,8 +561,11 @@ class BPS_BMEI_Sentinel:
                     args=["--disable-blink-features=AutomationControlled"]
                 )
 
-                tasks = [self.process_article(context, entry, site, real_url) for site, entry, real_url in new_targets]
-                await asyncio.gather(*tasks, return_exceptions=True)
+                batch_size = 5
+                for i in range(0, len(new_targets), batch_size):
+                    batch = new_targets[i:i+batch_size]
+                    tasks = [self.process_article(context, entry, site, real_url) for site, entry, real_url in batch]
+                    await asyncio.gather(*tasks, return_exceptions=True)
 
         except KeyboardInterrupt:
             print("\n\n[!] INTERUPSI (CTRL+C) TERDETEKSI. Mengamankan data dengan tenang...")
