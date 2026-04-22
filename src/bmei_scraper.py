@@ -578,15 +578,15 @@ class BPS_BMEI_Sentinel:
                 site_groups = defaultdict(list)
 
                 for s, e, u in new_targets:
-                    site_groups[s].append((s, e, u))
+                    site_groups[s].append((e, u))
                 
                 for site, items in site_groups.items():
                     print(f"\n[>>>] Memproses situs: {site.upper()} dengan {len(items)} Artikel")
-                    tasks = [self.process_article(context, e, s, u) for e, u in items]
+                    tasks = [self.process_article(context, e, site, u) for e, u in items]
                     await asyncio.gather(*tasks, return_exceptions=True)
 
                     await asyncio.sleep(random.uniform(1.5, 2.0))
-                    
+
         except KeyboardInterrupt:
             print("\n\n[!] INTERUPSI (CTRL+C) TERDETEKSI. Mengamankan data dengan tenang...")
         except Exception as e:
