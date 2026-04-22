@@ -32,9 +32,13 @@ class BPS_LNPRT_Sentinel:
     def __init__(self, args):
         self.args = args
         self.sites = [
-            "bandung.go.id", "jabarprov.go.id", "jabar.tribunnews.com",
+            "bandung.go.id",
             "tempo.co", "tirto.id", "narasi.tv", "ayobandung.com", "pikiran-rakyat.com", 
-            "bandung.kompas.com", "detik.com", "liputan6.com", "republika.co.id", "suara.com"
+            "bandung.kompas.com", "disdagin.bandung.go.id",
+            "radarbandung.id", "kumparan.com", "cnnindonesia.com",
+            "rri.co.id", "infobandungkota.com", "prfmnews.id", 
+            "kilasbandungnews.com", "bandungbergerak.id", "koranmandala.com", 
+            "jabarekspres.com", "jabarprov.go.id", "jabar.tribunnews.com"
         ]
         
         self.edge_source_dir = str(Path.home() / "AppData" / "Local" / "Microsoft" / "Edge" / "User Data")
@@ -46,6 +50,8 @@ class BPS_LNPRT_Sentinel:
         os.makedirs(self.export_dir, exist_ok=True)
         
         self.session_data = []
+        self.session_timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        self.checkpoint_path = self.export_dir / f"lnprt_audit_{self.session_timestamp}.xlsx"
         
         self.permanent_visited_urls = set()
         self.session_active_urls = set()
@@ -307,7 +313,7 @@ class BPS_LNPRT_Sentinel:
         if has_activity or has_entity: 
             return True, "Lolos Leksikal: Indikator Kegiatan/Entitas LNPRT"
             
-        return False, "Lolos Geografi, namun miskin indikator LNPRT BPS"
+        return True, "Lolos Geografi, namun miskin indikator LNPRT BPS"
 
     def smart_truncate(self, text):
         text_lower = text.lower()
@@ -353,28 +359,60 @@ class BPS_LNPRT_Sentinel:
 
     def save_checkpoint(self):
         if not self.session_data: return
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        filename = self.export_dir / f"bps_audit_lnprt_{timestamp}.xlsx"
+        filename = self.export_dir / f"audit_report_lnprt_{self.session_timestamp}.xlsx"
+
         df = pd.DataFrame(self.session_data)
-        cols = ["Tanggal Terbit Publikasi", "Tanggal Ekstraksi", "Sumber", "Judul", "URL", "Status Geografi", "Entitas Terdeteksi", "Jenis Pengeluaran/Kegiatan", "Skor", "Teks"]
-        df = df.rename(columns={"Indikator Dagang": "Jenis Pengeluaran/Kegiatan"})
+        cols = ["Tanggal Terbit Publikasi", "Tanggal Ekstraksi", "Sumber", "Judul", "URL", "Status Geografi", "Entitas Terdeteksi", "Indikator Dagang", "Anomali", "Skor", "Teks"]
         df = df[[c for c in cols if c in df.columns]]
 
         writer = pd.ExcelWriter(filename, engine='xlsxwriter')
-        df.to_excel(writer, index=False, sheet_name='Audit LNPRT')
+        df.to_excel(writer, index=False, sheet_name='Audit SLM')
         workbook = writer.book
-        worksheet = writer.sheets['Audit LNPRT']
+        worksheet = writer.sheets['Audit SLM']
         url_idx = df.columns.get_loc("URL")
         for row_num, url in enumerate(df["URL"]):
             if pd.notna(url) and str(url).startswith("http"):
                 worksheet.write_url(row_num + 1, url_idx, str(url), string="BACA ARTIKEL")
         writer.close()
 
-    def _build_search_query(self, site):
-        base_query = f'site:{site} "Kota Bandung" (yayasan OR "ikatan alumni" OR donasi OR "partai politik" OR panti OR baznas OR "lazis" OR "lembaga swadaya" OR "bakti sosial")'
-        if self.args.start: base_query += f' after:{self.args.start}'
-        if self.args.end: base_query += f' before:{self.args.end}'
-        return urllib.parse.quote(base_query)
+        print(f"\n[✓] Checkpoint aman: {len(self.session_data)} artikel disimpan di:\n      -> {filename.absolute()}", flush=True)
+
+    def merge_audits(self):
+        """Data Aggregation: Menggabungkan hasil audit baru dengan laporan historis untuk analisis longitudinal."""
+        print("\n[+] Memulai Proses Penggabungan Data Historis...")
+
+        files = [f for f in self.export_dir.glob("audit_report_lnprt_*.xlsx") if "Master" not in f.name]
+        if not files:
+            print("[-] Tidak ada laporan historis ditemukan untuk digabungkan.")
+            return
+        
+        all_df = []
+        for f in files:
+            try:
+                df = pd.read_excel(f)
+                all_df.append(df)
+            except Exception as e:
+                print(f"     [!!!] Gagal membaca {f.name}: {e}")
+        
+        if all_df:
+            master_df = pd.concat(all_df, ignore_index=True)
+            if "URL" in master_df.columns:
+                master_df.drop_duplicates(subset=["URL"], keep="last", inplace=True)
+            
+            master_file = self.export_dir / "Master_Audit_LNPRT.xlsx"
+
+            writer = pd.ExcelWriter(master_file, engine='xlsxwriter')
+            master_df.to_excel(writer, index=False, sheet_name='Master LNPRT')
+            worksheet = writer.sheets['Master LNPRT']
+
+            if "URL" in master_df.columns:
+                url_idx = master_df.columns.get_loc("URL")
+                for row_num, url in enumerate(master_df["URL"]):
+                    if pd.notna(url) and str(url).startswith("http"):
+                        worksheet.write_url(row_num + 1, url_idx, str(url), string="BACA ARTIKEL")
+            
+            writer.close()
+            print(f"[✓] Penggabungan selesai! {len(master_df)} baris data unik tersimpan di:\n      -> {master_file.absolute()}")
 
     async def fetch_rss(self, site):
         query = self._build_search_query(site)
@@ -413,10 +451,17 @@ class BPS_LNPRT_Sentinel:
                 return
 
             published_date = entry.get("published", "Tanggal Tidak Tersedia")
-            task_log.append(f"\n [>] Mengekstraksi [{site}]: {entry.title[:50]}...")
+            print(f" [*] Membedah: {entry.title[:60]}...", flush=True)
+            task_log.append(f"\n [>] Hasil Audit [{site}]: {entry.title[:60]}...")
             
             page = await context.new_page()
-            await page.route("**/*", self.network_interceptor)
+
+            async def block_media(route):
+                if route.request.resource_type in ["image", "media", "font", "stylesheet"]:
+                    await route.abort()
+                else:
+                    await route.continue_()
+            await page.route("**/*", block_media)
             
             pacing_type = "fast"
             try:
@@ -495,6 +540,9 @@ class BPS_LNPRT_Sentinel:
                     task_log.append(f"     [ERROR Ekstraksi] {e}. {link_text}")
                 pacing_type = "fast"
             finally:
+                if len(task_log) > 1:
+                    async with self.print_lock:
+                        print("\n".join(task_log))
                 if not page.is_closed(): await page.close()
                 
                 if task_log:
@@ -532,6 +580,7 @@ class BPS_LNPRT_Sentinel:
             real_url = self._decode_google_url(entry.link)
             if real_url in self.permanent_visited_urls:
                 cached_count += 1
+                print(f" [>] Target sudah diaudit sebelumnya, melewati: {entry.title[:50]}... ({real_url})")
             else:
                 new_targets.append((site, entry, real_url))
                 
@@ -553,8 +602,18 @@ class BPS_LNPRT_Sentinel:
                     args=["--disable-blink-features=AutomationControlled"]
                 )
 
-                tasks = [self.process_article(context, entry, site, real_url) for site, entry, real_url in new_targets]
-                await asyncio.gather(*tasks)
+                from collections import defaultdict
+                site_groups = defaultdict(list)
+
+                for s, e, u in new_targets:
+                    site_groups[s].append((e, u))
+                
+                for site, items in site_groups.items():
+                    print(f"\n[>>>] Memproses situs: {site.upper()} dengan {len(items)} Artikel")
+                    tasks = [self.process_article(context, e, site, u) for e, u in items]
+                    await asyncio.gather(*tasks, return_exceptions=True)
+
+                    await asyncio.sleep(random.uniform(1.5, 2.0))
 
         except KeyboardInterrupt:
             print("\n\n[!] INTERUPSI (CTRL+C) TERDETEKSI. Mengamankan data dengan tenang...")
@@ -566,13 +625,36 @@ class BPS_LNPRT_Sentinel:
             if context:
                 try: await context.close()
                 except: pass
+
+            pending_tasks = [t for t in asyncio.all_tasks() if t is not asyncio.current_task()]
+            for task in pending_tasks:
+                task.cancel()
+
             sys.exit(0)
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="BPS LNPRT Investigative Scraper")
     parser.add_argument('--mode', type=str, default='live', help='Mode eksekusi (live/history)')
     parser.add_argument('--start', type=str, default='', help='Format: YYYY-MM-DD')
     parser.add_argument('--end', type=str, default='', help='Format: YYYY-MM-DD')
+    parser.add_argument('--merge', action='store_true', help='Gabungkan dengan dataset historis')
     args = parser.parse_args()
     
-    asyncio.run(BPS_LNPRT_Sentinel(args).run())
+    sentinel = BPS_LNPRT_Sentinel(args)
+
+    if args.merge:
+        print("[MERGE MODE] Menggabungkan dataset historis dengan hasil audit terbaru...")
+        historical_file = sentinel.export_dir / "historical_audit_data.xlsx"
+        if historical_file.exists():
+            try:
+                historical_df = pd.read_excel(historical_file)
+                historical_records = historical_df.to_dict(orient='records')
+                sentinel.session_data.extend(historical_records)
+                print(f" [✓] Berhasil menggabungkan {len(historical_records)} catatan historis.")
+            except Exception as e:
+                print(f" [!] Gagal memuat data historis: {e}")
+        else:
+            print(" [!] File historis tidak ditemukan. Melanjutkan dengan dataset baru saja.")
+    
+    asyncio.run(sentinel.run())

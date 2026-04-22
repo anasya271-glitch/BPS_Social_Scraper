@@ -363,8 +363,8 @@ class BPS_BMEI_Sentinel:
 
     def save_checkpoint(self):
         if not self.session_data: return
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        filename = self.export_dir / f"audit_report_bmei_{timestamp}.xlsx"
+        filename = self.export_dir / f"audit_report_bmei_{self.session_timestamp}.xlsx"
+
         df = pd.DataFrame(self.session_data)
         cols = ["Tanggal Terbit Publikasi", "Tanggal Ekstraksi", "Sumber", "Judul", "URL", "Status Geografi", "Entitas Terdeteksi", "Indikator Dagang", "Anomali", "Skor", "Teks"]
         df = df[[c for c in cols if c in df.columns]]
@@ -378,6 +378,45 @@ class BPS_BMEI_Sentinel:
             if pd.notna(url) and str(url).startswith("http"):
                 worksheet.write_url(row_num + 1, url_idx, str(url), string="BACA ARTIKEL")
         writer.close()
+
+        print(f"\n[✓] Checkpoint aman: {len(self.session_data)} artikel disimpan di:\n      -> {filename.absolute()}", flush=True)
+
+    def merge_audits(self):
+        """Data Aggregation: Menggabungkan hasil audit baru dengan laporan historis untuk analisis longitudinal."""
+        print("\n[+] Memulai Proses Penggabungan Data Historis...")
+
+        files = [f for f in self.export_dir.glob("audit_report_bmei_*.xlsx") if "Master" not in f.name]
+        if not files:
+            print("[-] Tidak ada laporan historis ditemukan untuk digabungkan.")
+            return
+        
+        all_df = []
+        for f in files:
+            try:
+                df = pd.read_excel(f)
+                all_df.append(df)
+            except Exception as e:
+                print(f"     [!!!] Gagal membaca {f.name}: {e}")
+        
+        if all_df:
+            master_df = pd.concat(all_df, ignore_index=True)
+            if "URL" in master_df.columns:
+                master_df.drop_duplicates(subset=["URL"], keep="last", inplace=True)
+            
+            master_file = self.export_dir / "Master_Audit_BMEI.xlsx"
+
+            writer = pd.ExcelWriter(master_file, engine='xlsxwriter')
+            master_df.to_excel(writer, index=False, sheet_name='Master BMEI')
+            worksheet = writer.sheets['Master BMEI']
+
+            if "URL" in master_df.columns:
+                url_idx = master_df.columns.get_loc("URL")
+                for row_num, url in enumerate(master_df["URL"]):
+                    if pd.notna(url) and str(url).startswith("http"):
+                        worksheet.write_url(row_num + 1, url_idx, str(url), string="BACA ARTIKEL")
+            
+            writer.close()
+            print(f"[✓] Penggabungan selesai! {len(master_df)} baris data unik tersimpan di:\n      -> {master_file.absolute()}")
 
     def _build_search_query(self, site):
         base_query = f'site:{site} "Kota Bandung" (ekspor OR impor OR "bea cukai" OR logistik)'
@@ -422,8 +461,8 @@ class BPS_BMEI_Sentinel:
                 return
 
             published_date = entry.get("published", "Tanggal Tidak Tersedia")
-            print(f" [*] Membedah: {entry.title[:50]}...", flush=True)
-            task_log.append(f"\n [>] Mengekstraksi [{site}]: {entry.title[:50]}...")
+            print(f" [*] Membedah: {entry.title[:60]}...", flush=True)
+            task_log.append(f"\n [>] Hasil Audit [{site}]: {entry.title[:60]}...")
             
             page = await context.new_page()
 
@@ -516,6 +555,9 @@ class BPS_BMEI_Sentinel:
                     task_log.append(f"     [ERROR Ekstraksi] {e}. {link_text}")
                 pacing_type = "fast"
             finally:
+                if len(task_log) > 1:
+                    async with self.print_lock:
+                        print("\n".join(task_log))
                 if not page.is_closed(): await page.close()
                 
                 if task_log:
@@ -598,6 +640,11 @@ class BPS_BMEI_Sentinel:
             if context:
                 try: await context.close()
                 except: pass
+
+            pending_tasks = [t for t in asyncio.all_tasks() if t is not asyncio.current_task()]
+            for task in pending_tasks:
+                task.cancel()
+
             sys.exit(0)
 
 if __name__ == "__main__":
@@ -605,6 +652,23 @@ if __name__ == "__main__":
     parser.add_argument('--mode', type=str, default='live', help='Mode eksekusi (live/history)')
     parser.add_argument('--start', type=str, default='', help='Format: YYYY-MM-DD')
     parser.add_argument('--end', type=str, default='', help='Format: YYYY-MM-DD')
+    parser.add_argument('--merge', action='store_true', help='Gabungkan dengan dataset historis')
     args = parser.parse_args()
     
-    asyncio.run(BPS_BMEI_Sentinel(args).run())
+    sentinel = BPS_BMEI_Sentinel(args)
+
+    if args.merge:
+        print("[MERGE MODE] Menggabungkan dataset historis dengan hasil audit terbaru...")
+        historical_file = sentinel.export_dir / "historical_audit_data.xlsx"
+        if historical_file.exists():
+            try:
+                historical_df = pd.read_excel(historical_file)
+                historical_records = historical_df.to_dict(orient='records')
+                sentinel.session_data.extend(historical_records)
+                print(f" [✓] Berhasil menggabungkan {len(historical_records)} catatan historis.")
+            except Exception as e:
+                print(f" [!] Gagal memuat data historis: {e}")
+        else:
+            print(" [!] File historis tidak ditemukan. Melanjutkan dengan dataset baru saja.")
+    
+    asyncio.run(sentinel.run())
