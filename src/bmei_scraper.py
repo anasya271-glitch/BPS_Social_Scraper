@@ -469,7 +469,10 @@ class BPS_BMEI_Sentinel:
                         status_geo = audit_result.get("status_geografi", "Unknown")
                         task_log.append(f"     [SLM JUDGE] Geofencing: {status_geo}")
                         
-                        if "Diluar Yuridiksi" not in status_geo and "Konteks Tidak Relevan" not in status_geo:
+                        rejected_keywords = ["diluar yuridiksi", "konteks tidak relevan", "out of jurisdiction", "error", "irrelevant", "luar yuridiksi", "tidak relevan"]
+                        is_rejected = any(kw in status_geo.lower() for kw in rejected_keywords)
+
+                        if not is_rejected:
                             self.session_data.append({
                                 "Tanggal Terbit Publikasi": published_date,
                                 "Tanggal Ekstraksi": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
@@ -566,6 +569,7 @@ class BPS_BMEI_Sentinel:
                     batch = new_targets[i:i+batch_size]
                     tasks = [self.process_article(context, entry, site, real_url) for site, entry, real_url in batch]
                     await asyncio.gather(*tasks, return_exceptions=True)
+                    await asyncio.sleep(1.5)
 
         except KeyboardInterrupt:
             print("\n\n[!] INTERUPSI (CTRL+C) TERDETEKSI. Mengamankan data dengan tenang...")
