@@ -108,12 +108,12 @@ GEOGRAPHY = {
         r"\bcidadap\b",
         r"\bcinambo\b",
         r"\bcoblong\b",
-        r"\bgedebage\b",
+        r"\bgede[\s\-]?bage\b",
         r"\bkiara[\s\-]?condong\b",
         r"\blengkong\b",
         r"\bmandalajati\b",
         r"\bpanyileukan\b",
-        r"\brancasari\b",
+        r"\branca[\s\-]?sari\b",
         r"\bregol\b",
         r"\bsukajadi\b",
         r"\bsukasari\b",
@@ -134,7 +134,7 @@ NAKER_POSITIF = [r"\bbuka lowongan\b", r"\blowongan kerja\b", r"\blowongan pabri
 NAKER_NEGATIF = [r"\bphk\b", r"\bpemutusan hubungan kerja\b", r"\bdirumahkan\b", r"\bpemecatan\b", r"\bdipecat\b", r"\brasionalisasi karyawan\b", r"\brasionalisasi tenaga kerja\b", r"\brasionalisasi\s+sdm\b", r"\bright[\s\-]?sizing\b", r"\bdown[\s\-]?sizing\b", r"\brestrukturisasi organisasi\b", r"\brefisiensi\s?sdm\b", r"\befisiensi\s?sumber\s?daya\s?manusia\b", r"\bpengurangan tenaga kerja\b", r"\bpengurangan karyawan\b", r"\bpenyesuaian struktur\b", r"\boptimalisasi tenaga kerja\b", r"\bpemangkasan\s+pegawai\b", r"\bpemangkasan\s+karyawan\b", r"\breduksi\s+tenaga\s+kerja\b", r"\breduksi\s+sdm\b", r"\btidak diperpanjang kontrak\b", r"\bkontrak tidak dilanjutkan\b", r"\bkontrak habis\b", r"\bkontrak berakhir\b", r"\bberhenti beroperasi\b", r"\bpenutupan operasional\b", r"\bpenghentian produksi\b", r"\bpenghentian operasi\b", r"\bsuspend\s?operasi\b", r"\btutup sementara\b", r"\bpabrik tutup\b", r"\btutup pabrik\b", r"\bgulung tikar\b", r"\bbangkrut\b", r"\bpailit\b", r"\blikuidasi\b", r"\bpenutupan perusahaan\b", r"\bpenutupan pabrik\b", r"\bkurangi karyawan\b", r"\bkurangi tenaga\b", r"\bpemotongan\s?pegawai\b", r"\bpengurangan\s?shift\b", r"\bpemotongan\s?jam\s?kerja\b", r"\bpengurangan\s?jam\s?kerja\b", r"\bgagal panen\b", r"\bpuso\b", r"\bomzet turun drastis\b", r"\bsepi pembeli\b", r"\bsepi order\b", r"\bkehilangan kontrak\b", r"\brelokasi pabrik\b", r"\bpindah pabrik\b"]
 NAKER_ISU = [r"\bupah minimum\b", r"\bump\b", r"\bumk\b", r"\bumr\b", r"\bumkm\b", r"\bgaji\b", r"\bpeningkatan upah\b", r"\bkenaikan upah\b", r"\bupah buruh\b", r"\bupah pekerja\b", r"\btunjangan\b", r"\bthr\b", r"\btunjangan hari raya\b", r"\bbpjs ketenagakerjaan\b", r"\bjamsostek\b", r"\bpesangon\b", r"\buang pesangon\b", r"\bbonus karyawan\b", r"\bdemo buruh\b", r"\bunjuk rasa buruh\b", r"\bpemogokan\b", r"\baksi mogok\b", r"\bmogok kerja\b", r"\bserikat pekerja\b", r"\bserikat buruh\b", r"\boutsourcing\b", r"\bpekerja kontrak\b", r"\bpkwt\b", r"\bpkwtt\b", r"\bkontrak kerja\b", r"\bperjanjian kerja\b", r"\bhak pekerja\b", r"\bkesejahteraan buruh\b", r"\bcuti bersama\b", r"\blembur\b", r"\bk3\b", r"\bkeselamatan kerja\b"]
 NOISE_WORDS = [r"\bpersib\b", r"\bliga\b", r"\bpilkada\b", r"\bcpns\b", r"\bsyarat pendaftaran\b", r"\bgempa\b", r"\bkecelakaan\b", r"\bpembunuhan\b", r"\bnarkoba\b", r"\bbencana\b", r"\bpilkada\b", r"\bkampanye\b", r"\bcapres\b", r"\bcawalkot\b", r"\bpartai\b", r"\bkpu\b", r"\bbawaslu\b", r"\bkampus\b", r"\buniversitas\b", r"\binstitut\b", r"\bpoliteknik\b", r"\bmahasiswa\b", r"\bdosen\b", r"\brektor\b", r"\bwisuda\b", r"\bsnbt\b", r"\bppdb\b", r"\bseminar\b", r"\bwebinar\b", r"\basn\b", r"\bcpns\b", r"\bpppk\b", r"\bmutasi jabatan\b", r"\brotasi jabatan\b", r"\bkinerja asn\b", r"\bsyarat pendaftaran\b", r"\bcara melamar\b", r"\blink pendaftaran\b", r"\bkirim lamaran\b"]
-TITLE_BLACKLIST = ["visi", "misi", "tupoksi", "kontak", "jadwal", "indeks", "pegawai", "sejarah", "gallery", "profil", "bab i", "powerpoint", "open data", "jurnal", "pengumuman", "layanan", "beranda", "home", "index"]
+TITLE_BLACKLIST = [r"\bvisi\b", r"\bmisi\b", r"\btupoksi\b", r"\bkontak\b", r"\bjadwal\b", r"\bindeks\b", r"\bpegawai\b", r"\bsejarah\b", r"\bgallery\b", r"\bprofil\b", r"\bbab i\b", r"\bpower[\s\-]?point\b", r"\bopen[\s\-]?data\b", r"\bjurnal\b", r"\bpengumuman\b", r"\blayanan\b", r"\bberanda\b", r"\bhome\b", r"\bindex\b"]
 DOCUMENT_EXTENSIONS = [".pdf", ".doc", ".docx", ".xls", ".xlsx"]
 
 # Source credibility tiers
@@ -669,8 +669,9 @@ class RelevanceScorer:
 
     def is_rejected_preflight(self, title: str, url: str) -> Tuple[bool, str]:
         """Audit cepat sebelum mengunduh seluruh isi artikel (BPS V66 Standard)."""
-        title_lower = title.lower()
-        url_lower = url.lower()
+        # [FIX] Normalisasi absolut: Mencegah TypeError pada Regex jika title/url bernilai None
+        title_lower = str(title or "").lower()
+        url_lower = str(url or "").lower()
         
         # 1. Cek Ekstensi Dokumen
         if any(url_lower.endswith(ext) for ext in DOCUMENT_EXTENSIONS):
@@ -684,11 +685,21 @@ class RelevanceScorer:
         quick_score = 0
         combined = f"{title_lower} {url_lower}"
         
-        if any(re.search(r'\b' + re.escape(kw) + r'\b', combined) for kw in PRIMARY_KEYWORDS):
-            quick_score += SCORING_MATRIX['naker_primary']
+        def check_smart_keywords(kws):
+            for kw in kws:
+                smart_kw = kw.replace(" ", r"[\s\-]?")
+                if re.search(smart_kw, combined):
+                    return True
+            return False
             
-        if any(re.search(r'\b' + re.escape(kw) + r'\b', combined) for kw in SECONDARY_KEYWORDS):
-            quick_score += SCORING_MATRIX['naker_secondary']
+        # Penambahan leksikon krusial
+        expanded_primary = PRIMARY_KEYWORDS + ["loker", "bursa kerja", "rekrutmen", "job fair", "lowongan", "phk", "pemutusan hubungan kerja", "dirumahkan", "pengangguran"]
+        
+        if check_smart_keywords(expanded_primary):
+            quick_score += 20
+            
+        if check_smart_keywords(SECONDARY_KEYWORDS):
+            quick_score += 10
             
         # MELONGGARKAN AMBANG BATAS: Turun dari 20 ke 10 agar berita ekonomi makro (Sekunder) tidak terbuang
         if quick_score < 10:

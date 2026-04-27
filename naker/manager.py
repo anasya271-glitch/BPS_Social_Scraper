@@ -57,15 +57,34 @@ class DataManager:
 
         # Ensure directories exist
         for d in [self.output_dir, self.checkpoint_dir, self.audit_dir]:
-            try:
-                d.mkdir(parents=True, exist_ok=True)
-            except OSError as e:
-                logger.error(f"Failed to create directory {d}: {e}")
+            d.mkdir(parents=True, exist_ok=True)
 
-        self._article_count = 0
         self._buffer: list[dict] = []
-        self._seen_keys: set[str] = set()
         self._session_id = datetime.now().strftime("%Y%m%d_%H%M%S")
+        self._seen_keys = set()
+        self._article_count = 0
+
+        # [NEW] File visited URLs persistent
+        self.visited_file = self.output_dir / "visited_url_naker.txt"
+        self._load_visited_urls()
+
+    def _load_visited_urls(self):
+        """Muat visited URLs dari file text agar persist lintas sesi."""
+        if self.visited_file.exists():
+            with open(self.visited_file, "r", encoding="utf-8") as f:
+                for line in f:
+                    url = line.strip()
+                    if url:
+                        self._seen_keys.add(url)
+            logger.info(f"Memuat {len(self._seen_keys)} URL yang sudah dikunjungi dari {self.visited_file}")
+
+    def _append_visited_url(self, url: str):
+        """Simpan satu URL baru ke file text."""
+        try:
+            with open(self.visited_file, "a", encoding="utf-8") as f:
+                f.write(f"{url}\n")
+        except Exception as e:
+            logger.error(f"Gagal menulis ke {self.visited_file}: {e}")
 
     # --- Deduplication ---
 
@@ -94,12 +113,20 @@ class DataManager:
         return key in self._seen_keys
 
     def register(self, article: dict) -> bool:
-        """Register article; returns False if duplicate."""
-        key = self._dedup_key(article)
-        if key in self._seen_keys:
-            logger.debug(f"Duplicate skipped: {key[:80]}")
+        """
+        Register an article. Returns True if new, False if duplicate.
+        """
+        url = article.get("url")
+        if not url:
             return False
+
+        key = _normalize_text(url)
+        if not key or key in self._seen_keys:
+            return False
+
         self._seen_keys.add(key)
+        self._append_visited_url(key)  # [NEW] Langsung catat ke file TXT saat ditemukan
+        self._article_count += 1
         return True
 
     # --- Buffer & Checkpoint ---

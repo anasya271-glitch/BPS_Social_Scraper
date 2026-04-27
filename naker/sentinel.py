@@ -12,7 +12,7 @@ from datetime import datetime, timezone
 from typing import Dict, Any, Optional, List
 from pathlib import Path
 from collections import Counter
-from .bandung_scraper import BandungScraper, EuphemismMatch
+from .bandung_scraper import BandungScraper
 from .parser import extract_article_content, parse_date_safe
 from .scorer import RelevanceScorer
 from .manager import DataManager
@@ -173,11 +173,20 @@ class NakerSentinel:
         success_count = 0
         error_count = 0
 
+        import re
+
         for art in articles:
             try:
+                # [FIX] Heuristic URL Rewriting untuk mem-bypass Pagination CMS & Hidden Nodes
+                target_url = art.get("url", "")
+                if "pikiran-rakyat.com" in target_url or "ayobandung.com" in target_url:
+                    target_url = re.sub(r'/page/\d+', '', target_url)  # Bersihkan suffix /page/2
+                    if "?" not in target_url:
+                        target_url += "?page=all"  # Paksa muat semua teks dalam 1 halaman
+                
                 result = extract_article_content(
                     html=art.get("html", ""),
-                    url=art.get("url", ""),
+                    url=target_url,
                     selectors=art.get("selectors"),
                 )
                 art.update(result)
@@ -244,9 +253,10 @@ class NakerSentinel:
 
         t0 = datetime.now(timezone.utc)
         filter_cfg = self.config.get("filter", {})
-        threshold = filter_cfg.get("relevance_threshold", 0.4)
+        
+        threshold = filter_cfg.get("relevance_threshold", 0.1)
         max_age_days = filter_cfg.get("max_age_days", 30)
-        min_body_len = filter_cfg.get("min_body_length", 100)
+        min_body_len = filter_cfg.get("min_body_length", 50)
 
         now = datetime.now(timezone.utc)
         filtered = []
@@ -303,9 +313,8 @@ class NakerSentinel:
         import json
         import re
 
-        text = article.get("content", "")
-        if not text:
-            text = article.get("snippet", "")
+        # Ekstrak konten untuk dianalisis Ollama
+        text = article.get("content") or article.get("snippet") or ""
             
         if not text:
             article["status_geografi"] = "Error: Teks Kosong"
@@ -326,23 +335,66 @@ class NakerSentinel:
         else:
             truncated_text = text
 
-        logger.info(f"Mengirim Context Window (Smart Truncated) ke SLM: {article.get('url')[:50]}...")
+        # Hukum Absolut Prompt NAKER BPS
+        custom_prompt = f"""
+        Lakukan audit investigatif pada teks berita berikut untuk laporan Fenomena Ketenagakerjaan BPS Kota Bandung.
+        Keluarkan format JSON MURNI dengan keys:
+        1. "status_geografi" (Valid Kota Bandung / Out of Jurisdiction / Irrelevant)
+        2. "ringkasan_berita" (Satu paragraf padat merangkum kejadian utama ketenagakerjaan).
+        3. "dampak_bekerja" (1 Naik / 2 Turun / 3 Tetap)
+        4. "dampak_pengangguran" (1 Naik / 2 Turun / 3 Tetap)
+        5. "kategori_kbli" (Pilih SATU Kategori Huruf A sampai U yang paling relevan beserta namanya. Misal: "C. Industri Pengolahan", "G. Perdagangan", dll).
+        6. "confidence_score" (0-100, seberapa yakin Anda dengan analisis dampak naik/turun ini berdasarkan teks).
         
-        audit_result = self.ai_engine.classify_naker(truncated_text)
+        ATURAN ANALISIS (HUKUM ABSOLUT):
+        - Status Geofencing HARUS "Valid Kota Bandung" JIKA peristiwa terjadi secara fisik di Kota Bandung.
+        - Pekerja NAIK & Pengangguran TURUN jika: Pembukaan pabrik, job fair besar, ekspansi bisnis, proyek infrastruktur jalan.
+        - Pekerja TURUN & Pengangguran NAIK jika: PHK massal, pabrik tutup, gulung tikar, gagal panen, omzet anjlok drastis.
+        - Jika hanya membahas isu normatif (Tuntutan UMK, Aturan THR, Demo tanpa PHK), status keduanya adalah '3 Tetap'.
+        - TOLAK JIKA (Irrelevant Context): Hanya berita info lowongan kerja individual (cara melamar, link loker, syarat CPNS) yang tidak berdampak pada ekonomi makro. Atau jika peristiwa tidak terjadi di Bandung.
+        
+        Teks Berita:
+        {truncated_text}
+        """
 
-        if audit_result:
-            article.update({
-                "status_geografi": audit_result.get("status_geografi", "Unknown"),
-                "ringkasan_berita": audit_result.get("ringkasan_berita", ""),
-                "dampak_bekerja": audit_result.get("dampak_bekerja", ""),
-                "dampak_pengangguran": audit_result.get("dampak_pengangguran", ""),
-                "kategori_kbli": audit_result.get("kategori_kbli", ""),
-                "confidence_score": audit_result.get("confidence_score", "N/A")
-            })
-        else:
+        payload = {
+            "model": getattr(self, 'model_name', 'bps-naker'),
+            "prompt": custom_prompt,
+            "format": "json",
+            "stream": False
+        }
+
+        try:
+            logger.info(f"Mengirim Context Window ke SLM untuk URL: {article.get('url', '')[:50]}...")
+            response = requests.post(getattr(self, 'ollama_url', 'http://localhost:11434/api/generate'), json=payload, timeout=120)
+            
+            if response.status_code == 200:
+                raw_json = response.json().get("response", "{}")
+                try:
+                    # [FIX] Safety Net: Mencegah NoneType Crash jika Ollama gagal/timeout
+                    audit_result = json.loads(raw_json) if raw_json else {}
+                    if not isinstance(audit_result, dict):
+                        audit_result = {}
+
+                    article["status_geografi"] = audit_result.get("status_geografi", "Unknown")
+                    article["ringkasan_berita"] = audit_result.get("ringkasan_berita", "")
+                    article["dampak_bekerja"] = audit_result.get("dampak_bekerja", "")
+                    article["dampak_pengangguran"] = audit_result.get("dampak_pengangguran", "")
+                    article["kategori_kbli"] = audit_result.get("kategori_kbli", "")
+                    article["confidence_score"] = audit_result.get("confidence_score", "N/A")
+                except json.JSONDecodeError:
+                    logger.error(f"Format SLM non-JSON untuk URL: {article.get('url')}")
+                    article["status_geografi"] = "Error: Format SLM non-JSON"
+            else:
+                logger.error(f"SLM menolak dengan status {response.status_code}")
+                article["status_geografi"] = f"Error: SLM Status {response.status_code}"
+                
+        except requests.exceptions.RequestException as e:
+            logger.error(f"Gagal menghubungi Ollama: {e}")
             article["status_geografi"] = "Error: Daemon Ollama tertidur / Port tertutup."
 
         return article
+    
     def stage_save(self, articles: List[Dict[str, Any]]) -> int:
         """Stage 6: Persist articles via manager and generate report."""
         logger.info("=" * 50)
@@ -722,9 +774,9 @@ def get_default_config() -> Dict[str, Any]:
             "top_n": 20,
         },
         "filter": {
-            "relevance_threshold": 0.4,
+            "relevance_threshold": 0.1,
             "max_age_days": 30,
-            "min_body_length": 100,
+            "min_body_length": 50,
         },
         "interrogate": {
             "extract_entities": True,
@@ -791,19 +843,33 @@ def main():
         "end": args.end
     })
 
-    if args.dry_run:
-        config["dry_run"] = True
-
+    # Create sentinel and run
+    # Create sentinel and run
     sentinel = NakerSentinel(config)
     
-    # Jalur eksekusi khusus: MERGE (Audit-Ready)
+    # 1. Eksekusi Pipeline Utama
+    try:
+        asyncio.run(sentinel.run())
+    except KeyboardInterrupt:
+        print("\n" + "="*60)
+        print("[INTERRUPT] Sinyal penghentian (CTRL+C) diterima.")
+        print("[SYSTEM] Pipeline NAKER dihentikan secara aman.")
+        print("[SYSTEM] Progress Anda tidak hilang. History URL telah disandikan di 'visited_url_naker.txt'.")
+        print("="*60 + "\n")
+        # [FIX] sys.exit(0) dihapus dari sini agar instruksi merge tetap bisa dijalankan meskipun diinterupsi
+    except Exception as e:
+        logger.error(f"[FATAL] Pipeline gagal: {e}")
+
+    # 2. Eksekusi Prosedur Penggabungan (Jika Diminta)
     if args.merge:
-        logger.info(" [!] Memulai Prosedur Penggabungan Data Audit...")
-        sentinel.manager.merge_audit_files(start_date=args.start, end_date=args.end)
-        return
+        print("\n[SYSTEM] Memulai Prosedur Penggabungan Data Audit...")
+        try:
+            sentinel.manager.merge_audit_files(start_date=args.start, end_date=args.end)
+        except Exception as e:
+            logger.error(f"Gagal menggabungkan file audit: {e}")
 
-    asyncio.run(sentinel.run())
-
+    # 3. Keluar dengan Bersih
+    sys.exit(0)
 
 if __name__ == "__main__":
     main()

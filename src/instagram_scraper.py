@@ -305,7 +305,9 @@ class BPSMultimodalScraper:
         except Exception: pass
 
     def _generate_master_report(self):
-        print("\n[SYSTEM] Memulai konsolidasi Master Report...")
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        master_file = os.path.join(self.base_data_path, f"BPS_Master_Audit_IG_{timestamp}.xlsx")
+        print(f"[SYSTEM] Memulai konsolidasi Master Report ke: {master_file} ...")
         all_files = glob.glob(os.path.join(self.base_data_path, "*/*.xlsx"))
         if not all_files: return None
         
@@ -408,12 +410,19 @@ class BPSMultimodalScraper:
                 browser.close()
                 
         except KeyboardInterrupt: 
-            print("\n[INTERRUPT] Sinyal penghentian diterima. Langsung menyusun Master Report...")
+            print("\n[INTERRUPT] Sinyal penghentian diterima. Mengamankan memori dan menyusun Master Report...")
+            try:
+                if 'browser' in locals() and browser: browser.close()
+                if 'p' in locals() and p: p.stop()
+            except Exception: pass
         except Exception as e:
             print(f"\n[CRITICAL ERROR] Terjadi kegagalan sistemik: {e}")
+            try:
+                if 'browser' in locals() and browser: browser.close()
+            except Exception: pass
         finally: 
             master = self._generate_master_report()
-            if master: print(f"[FINAL] Master Audit Konsolidasi berhasil dibuat di: {master}")
+            if master: print(f"[FINAL] Audit Konsolidasi berhasil disandikan di: {os.path.abspath(master)}")
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="BPS Multimodal Audit Scraper")
