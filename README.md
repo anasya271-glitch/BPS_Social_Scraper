@@ -251,7 +251,7 @@ ollama create bps-lnprt -f modelfile_lnprt
 
 ##  Cara Penggunaan (Eksekusi)
 
-### A. Menjalankan Audit Berita Historis (bmei_scraper.py, lnprt_scraper.py, naker_scraper.py)
+### A. Menjalankan Audit Berita Historis (bmei_scraper.py, lnprt_scraper.py)
 
 Gunakan parameter rentang waktu untuk menarik data fenomena di masa lalu, contoh:
 
@@ -276,6 +276,13 @@ python src/nama_scraper.py --merge --start YYYY-MM-DD --end YYYY-MM-DD
 
 ```bash
 python src/instagram_scraper.py --target username_akun
+```
+
+### C. Scraper Kompilasi Fenomena Ketenagakerjaan (naker/ pipeline)
+Sama dengan scraper lainnya, naker pipeline mempunya fungsi parser yang menyediakan parameter rentang waktu tertentu yang menjadi target scraping. Selain itu, perbedaannya terletak pada syarat untuk menggunakan argumen -m (module) dari direktori utama (BPS_Social_Scraper) serta penggunaan naker.sentinel alih alih naker/sentinel.py sebagai *top level script*.
+
+```bash
+py -m naker.sentinel --mode history --start YYYY-MM-DD --end YYYY-MM-DD
 ```
 
 -----
