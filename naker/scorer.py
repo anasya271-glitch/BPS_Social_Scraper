@@ -18,27 +18,27 @@ logger = logging.getLogger("naker.scorer")
 # Keyword sets
 # ============================================================
 PRIMARY_KEYWORDS = [
-    "ketenagakerjaan", "tenaga kerja", "pengangguran", "lowongan kerja",
-    "PHK", "pemutusan hubungan kerja", "upah minimum", "UMK", "UMP", "UMR",
-    "buruh", "serikat pekerja", "BPJS Ketenagakerjaan", "Disnaker",
-    "Dinas Tenaga Kerja", "TPK", "Tingkat Pengangguran Terbuka", "TPAK",
-    "padat karya", "outsourcing", "kontrak kerja", "magang", "pelatihan kerja",
-    "angkatan kerja", "informal", "BLK", "Balai Latihan Kerja",
+    r"\bketenaga[\s\-]?kerjaan", r"\btenaga[\s\-]?kerja", r"\bpengangguran", r"\blowongan[\s\-]?kerja",
+    r"\bPHK", r"\bpemutusan[\s\-]?hubungan[\s\-]?kerja", r"\bupah[\s\-]?minimum", r"\bUMK", r"\bUMP", r"\bUMR",
+    r"\bburuh", r"\bserikat[\s\-]?pekerja", r"\bBPJS[\s\-]?Ketenagakerjaan", r"\bDisnaker",
+    r"\bDinas[\s\-]?Tenaga[\s\-]?Kerja", r"\bTPK", r"\bTingkat[\s\-]?Pengangguran[\s\-]?Terbuka", r"\bTPAK",
+    r"\bpadat[\s\-]?karya", r"\outsourcing", r"\bkontrak[\s\-]?kerja", r"\bmagang", r"\bpelatihan[\s\-]?kerja",
+    r"\bangkatan[\s\-]?kerja", r"\binformal", r"\bBLK", r"\bBalai[\s\-]?Latihan[\s\-]?Kerja",
 ]
 
 SECONDARY_KEYWORDS = [
-    "UMKM", "investasi", "industri", "ekonomi", "inflasi",
-    "manufaktur", "perdagangan", "pariwisata", "digitalisasi",
-    "automasi", "gig economy", "BPS", "Badan Pusat Statistik",
-    "sertifikasi", "pelatihan", "produktivitas",
+    r"\bUMKM", r"\binvestasi", r"\bindustri", r"\bekonomi", r"\binflasi",
+    r"\bmanufaktur", r"\bperdagangan", r"\bpariwisata", r"\bdigitalisasi",
+    r"\bautomasi", r"\bgig[\s\-]?economy", r"\bBPS", r"\bBadan[\s\-]?Pusat[\s\-]?Statistik",
+    r"\bsertifikasi", r"\bpelatihan", r"\bproduktivitas",
 ]
 
 GEOGRAPHIC_PRIMARY = [
-    "Bandung", "Kota Bandung",
+    r"\bBandung\b", r"\bKota[\s\-]?Bandung\b"
 ]
 
 GEOGRAPHIC_SECONDARY = [
-    "Jawa Barat", "Jabar", "Metropolitan Bandung", "Bandung Raya",
+    r"\bJawa[\s\-]?Barat\b", r"\bJabar\b", r"\bMetropolitan[\s\-]?Bandung\b", r"\bBandung[\s\-]?Raya\b",
 ]
 
 NEGATIVE_PATTERNS = [
@@ -79,62 +79,62 @@ SCORING_MATRIX = {
 
 GEOGRAPHY = {
     "STRICT_ANCHORS": [
-        r"\bkota[\s\-]?bandung\b",
-        r"\bpemkot[\s\-]?bandung\b",
-        r"\bwali[\s\-]?kota[\s\-]?bandung\b",
-        r"\bbandung[\s\-]?kota\b",
-        r"\bdprd[\s\-]?kota[\s\-]?bandung\b",
-        r"\bdisnaker[\s\-]?kota[\s\-]?bandung\b",
-        r"\bdisnaker[\s\-]?bandung\b",
-        r"\bpemkot[\s\-]?bdg\b",
-        r"\bkotamadya[\s\-]?bandung\b",
+        r"\bkota[\s\-]?bandung",
+        r"\bpemkot[\s\-]?bandung",
+        r"\bwali[\s\-]?kota[\s\-]?bandung",
+        r"\bbandung[\s\-]?kota",
+        r"\bdprd[\s\-]?kota[\s\-]?bandung",
+        r"\bdisnaker[\s\-]?kota[\s\-]?bandung",
+        r"\bdisnaker[\s\-]?bandung",
+        r"\bpemkot[\s\-]?bdg",
+        r"\bkotamadya[\s\-]?bandung",
     ],
     "DISTRICTS": [
-        r"\bandir\b",
-        r"\bastana[\s\-]?anyar\b",
-        r"\bantapani\b",
-        r"\barcamanik\b",
-        r"\bbabakan[\s\-]?ciparay\b",
-        r"\bbandung[\s\-]?kidul\b",
-        r"\bbandung[\s\-]?kulon\b",
-        r"\bbandung[\s\-]?wetan\b",
-        r"\bbatununggal\b",
-        r"\bbojongloa[\s\-]?kaler\b",
-        r"\bbojongloa[\s\-]?kidul\b",
-        r"\bbuah[\s\-]?batu\b",
-        r"\bcibeunying\b",
-        r"\bcibiru\b",
-        r"\bcicendo\b",
-        r"\bcidadap\b",
-        r"\bcinambo\b",
-        r"\bcoblong\b",
-        r"\bgede[\s\-]?bage\b",
-        r"\bkiara[\s\-]?condong\b",
-        r"\blengkong\b",
-        r"\bmandalajati\b",
-        r"\bpanyileukan\b",
-        r"\branca[\s\-]?sari\b",
-        r"\bregol\b",
-        r"\bsukajadi\b",
-        r"\bsukasari\b",
-        r"\bsumur[\s\-]?bandung\b",
-        r"\bujung[\s\-]?berung\b",
+        r"\bandir",
+        r"\bastana[\s\-]?anyar",
+        r"\bantapani",
+        r"\barcamanik",
+        r"\bbabakan[\s\-]?ciparay",
+        r"\bbandung[\s\-]?kidul",
+        r"\bbandung[\s\-]?kulon",
+        r"\bbandung[\s\-]?wetan",
+        r"\bbatununggal",
+        r"\bbojongloa[\s\-]?kaler",
+        r"\bbojongloa[\s\-]?kidul",
+        r"\bbuah[\s\-]?batu",
+        r"\bcibeunying",
+        r"\bcibiru",
+        r"\bcicendo",
+        r"\bcidadap",
+        r"\bcinambo",
+        r"\bcoblong",
+        r"\bgede[\s\-]?bage",
+        r"\bkiara[\s\-]?condong",
+        r"\blengkong",
+        r"\bmandalajati",
+        r"\bpanyileukan",
+        r"\branca[\s\-]?sari",
+        r"\bregol",
+        r"\bsukajadi",
+        r"\bsukasari",
+        r"\bsumur[\s\-]?bandung",
+        r"\bujung[\s\-]?berung",
     ],
     "LANDMARKS": [
-        r"\bjl\.?\s?asia\s?afrika\b", r"\bjl\.?\s?dago\b", r"\bjl\.?\s?braga\b",
-        r"\balun[\s\-]?alun\b", r"\bgedung\s?sate\b", r"\btrans\s?studio\b", r"\bgasibu\b",
+        r"\bjl\.?\s?asia\s?afrika", r"\bjl\.?\s?dago", r"\bjl\.?\s?braga",
+        r"\balun[\s\-]?alun", r"\bgedung\s?sate", r"\btrans\s?studio", r"\bgasibu",
     ],
     "BLACKLIST": [
-        r"\bkabupaten[\s\-]?bandung\b", r"\bkab\.?\s?bandung\b", r"\bsoreang\b",
-        r"\bkbb\b", r"\bbandung[\s\-]?barat\b", r"\blembang\b", r"\bcimahi\b",
+        r"\bkabupaten[\s\-]?bandung", r"\bkab\.?\s?bandung", r"\bsoreang",
+        r"\bkbb", r"\bbandung[\s\-]?barat", r"\blembang", r"\bcimahi",
     ],
 }
 
-NAKER_POSITIF = [r"\bbuka lowongan\b", r"\blowongan kerja\b", r"\blowongan pabrik\b", r"\brekrutmen\b", r"\brekrutmen massal\b", r"\brekrutmen terbuka\b", r"\bpenerimaan karyawan\b", r"\bpenerimaan pegawai\b", r"\bpenerimaan tenaga kerja\b", r"\bterima karyawan\b", r"\bjob fair\b", r"\bbursa kerja\b", r"\bbursa kerja khusus\b", r"\bbkk\b", r"\bexpo kerja\b", r"\bpameran kerja\b", r"\bhiring\b", r"\bwe are hiring\b", r"\bdibutuhkan segera\b", r"\bbutuh tenaga\b", r"\bmembuka posisi\b", r"\bkarir terbuka\b", r"\bcareer opportunity\b", r"\bpadat karya\b", r"\bserap tenaga kerja\b", r"\bpenyerapan tenaga kerja\b", r"\bmembuka lapangan kerja\b", r"\btambah karyawan\b", r"\bpenambahan pekerja\b", r"\bpenambahan sdm\b", r"\bpenambahan tenaga\b", r"\bpabrik baru\b", r"\bbuka pabrik\b", r"\bpabrik ekspansi\b", r"\bpeningkatan produksi\b", r"\bpeningkatan kapasitas\b", r"\bekspansi bisnis\b", r"\bproyek infrastruktur\b", r"\binvestasi baru\b", r"\binvestasi pabrik\b", r"\bpelatihan kerja\b", r"\bmagang\b", r"\bpraktek kerja\b", r"\bapprentice\b", r"\bvokasi\b"]
-NAKER_NEGATIF = [r"\bphk\b", r"\bpemutusan hubungan kerja\b", r"\bdirumahkan\b", r"\bpemecatan\b", r"\bdipecat\b", r"\brasionalisasi karyawan\b", r"\brasionalisasi tenaga kerja\b", r"\brasionalisasi\s+sdm\b", r"\bright[\s\-]?sizing\b", r"\bdown[\s\-]?sizing\b", r"\brestrukturisasi organisasi\b", r"\brefisiensi\s?sdm\b", r"\befisiensi\s?sumber\s?daya\s?manusia\b", r"\bpengurangan tenaga kerja\b", r"\bpengurangan karyawan\b", r"\bpenyesuaian struktur\b", r"\boptimalisasi tenaga kerja\b", r"\bpemangkasan\s+pegawai\b", r"\bpemangkasan\s+karyawan\b", r"\breduksi\s+tenaga\s+kerja\b", r"\breduksi\s+sdm\b", r"\btidak diperpanjang kontrak\b", r"\bkontrak tidak dilanjutkan\b", r"\bkontrak habis\b", r"\bkontrak berakhir\b", r"\bberhenti beroperasi\b", r"\bpenutupan operasional\b", r"\bpenghentian produksi\b", r"\bpenghentian operasi\b", r"\bsuspend\s?operasi\b", r"\btutup sementara\b", r"\bpabrik tutup\b", r"\btutup pabrik\b", r"\bgulung tikar\b", r"\bbangkrut\b", r"\bpailit\b", r"\blikuidasi\b", r"\bpenutupan perusahaan\b", r"\bpenutupan pabrik\b", r"\bkurangi karyawan\b", r"\bkurangi tenaga\b", r"\bpemotongan\s?pegawai\b", r"\bpengurangan\s?shift\b", r"\bpemotongan\s?jam\s?kerja\b", r"\bpengurangan\s?jam\s?kerja\b", r"\bgagal panen\b", r"\bpuso\b", r"\bomzet turun drastis\b", r"\bsepi pembeli\b", r"\bsepi order\b", r"\bkehilangan kontrak\b", r"\brelokasi pabrik\b", r"\bpindah pabrik\b"]
-NAKER_ISU = [r"\bupah minimum\b", r"\bump\b", r"\bumk\b", r"\bumr\b", r"\bumkm\b", r"\bgaji\b", r"\bpeningkatan upah\b", r"\bkenaikan upah\b", r"\bupah buruh\b", r"\bupah pekerja\b", r"\btunjangan\b", r"\bthr\b", r"\btunjangan hari raya\b", r"\bbpjs ketenagakerjaan\b", r"\bjamsostek\b", r"\bpesangon\b", r"\buang pesangon\b", r"\bbonus karyawan\b", r"\bdemo buruh\b", r"\bunjuk rasa buruh\b", r"\bpemogokan\b", r"\baksi mogok\b", r"\bmogok kerja\b", r"\bserikat pekerja\b", r"\bserikat buruh\b", r"\boutsourcing\b", r"\bpekerja kontrak\b", r"\bpkwt\b", r"\bpkwtt\b", r"\bkontrak kerja\b", r"\bperjanjian kerja\b", r"\bhak pekerja\b", r"\bkesejahteraan buruh\b", r"\bcuti bersama\b", r"\blembur\b", r"\bk3\b", r"\bkeselamatan kerja\b"]
-NOISE_WORDS = [r"\bpersib\b", r"\bliga\b", r"\bpilkada\b", r"\bcpns\b", r"\bsyarat pendaftaran\b", r"\bgempa\b", r"\bkecelakaan\b", r"\bpembunuhan\b", r"\bnarkoba\b", r"\bbencana\b", r"\bpilkada\b", r"\bkampanye\b", r"\bcapres\b", r"\bcawalkot\b", r"\bpartai\b", r"\bkpu\b", r"\bbawaslu\b", r"\bkampus\b", r"\buniversitas\b", r"\binstitut\b", r"\bpoliteknik\b", r"\bmahasiswa\b", r"\bdosen\b", r"\brektor\b", r"\bwisuda\b", r"\bsnbt\b", r"\bppdb\b", r"\bseminar\b", r"\bwebinar\b", r"\basn\b", r"\bcpns\b", r"\bpppk\b", r"\bmutasi jabatan\b", r"\brotasi jabatan\b", r"\bkinerja asn\b", r"\bsyarat pendaftaran\b", r"\bcara melamar\b", r"\blink pendaftaran\b", r"\bkirim lamaran\b"]
-TITLE_BLACKLIST = [r"\bvisi\b", r"\bmisi\b", r"\btupoksi\b", r"\bkontak\b", r"\bjadwal\b", r"\bindeks\b", r"\bpegawai\b", r"\bsejarah\b", r"\bgallery\b", r"\bprofil\b", r"\bbab i\b", r"\bpower[\s\-]?point\b", r"\bopen[\s\-]?data\b", r"\bjurnal\b", r"\bpengumuman\b", r"\blayanan\b", r"\bberanda\b", r"\bhome\b", r"\bindex\b"]
+NAKER_POSITIF = [r"\bbuka lowongan", r"\blowongan[\s\-]?kerja", r"\blowongan[\s\-]?pabrik", r"\brekrutmen", r"\brekrutmen[\s\-]?massal", r"\brekrutmen[\s\-]?terbuka", r"\bpenerimaan[\s\-]?karyawan", r"\bpenerimaan[\s\-]?pegawai", r"\bpenerimaan[\s\-]?tenaga[\s\-]?kerja", r"\bterima[\s\-]?karyawan", r"\bjob[\s\-]?fair", r"\bbursa[\s\-]?kerja", r"\bbursa[\s\-]?kerja khusus", r"\bbkk", r"\bexpo[\s\-]?kerja", r"\bpameran[\s\-]?kerja", r"\bhiring", r"\bwe are hiring", r"\bdibutuhkan segera", r"\bbutuh tenaga", r"\bmembuka posisi", r"\bkarir terbuka", r"\bcareer opportunity", r"\bpadat karya", r"\bserap tenaga kerja", r"\bpenyerapan tenaga kerja", r"\bmembuka lapangan kerja", r"\btambah karyawan", r"\bpenambahan pekerja", r"\bpenambahan sdm", r"\bpenambahan tenaga", r"\bpabrik baru", r"\bbuka pabrik", r"\bpabrik ekspansi", r"\bpeningkatan produksi", r"\bpeningkatan kapasitas", r"\bekspansi bisnis", r"\bproyek infrastruktur", r"\binvestasi baru", r"\binvestasi pabrik", r"\bpelatihan kerja", r"\bmagang", r"\bpraktek kerja", r"\bapprentice", r"\bvokasi"]
+NAKER_NEGATIF = [r"\bphk", r"\bpemutusan hubungan kerja", r"\bdirumahkan", r"\bpemecatan", r"\bdipecat", r"\brasionalisasi karyawan", r"\brasionalisasi tenaga kerja", r"\brasionalisasi\s+sdm", r"\bright[\s\-]?sizing", r"\bdown[\s\-]?sizing", r"\brestrukturisasi organisasi", r"\brefisiensi\s?sdm", r"\befisiensi\s?sumber\s?daya\s?manusia", r"\bpengurangan tenaga kerja", r"\bpengurangan karyawan", r"\bpenyesuaian struktur", r"\boptimalisasi tenaga kerja", r"\bpemangkasan\s+pegawai", r"\bpemangkasan\s+karyawan", r"\breduksi\s+tenaga\s+kerja", r"\breduksi\s+sdm", r"\btidak diperpanjang kontrak", r"\bkontrak tidak dilanjutkan", r"\bkontrak habis", r"\bkontrak berakhir", r"\bberhenti beroperasi", r"\bpenutupan operasional", r"\bpenghentian produksi", r"\bpenghentian operasi", r"\bsuspend\s?operasi", r"\btutup sementara", r"\bpabrik tutup", r"\btutup pabrik", r"\bgulung tikar", r"\bbangkrut", r"\bpailit", r"\blikuidasi", r"\bpenutupan perusahaan", r"\bpenutupan pabrik", r"\bkurangi karyawan", r"\bkurangi tenaga", r"\bpemotongan\s?pegawai", r"\bpengurangan\s?shift", r"\bpemotongan\s?jam\s?kerja", r"\bpengurangan\s?jam\s?kerja", r"\bgagal panen", r"\bpuso", r"\bomzet turun drastis", r"\bsepi pembeli", r"\bsepi order", r"\bkehilangan kontrak", r"\brelokasi pabrik", r"\bpindah pabrik"]
+NAKER_ISU = [r"\bupah minimum", r"\bump", r"\bumk", r"\bumr", r"\bumkm", r"\bgaji", r"\bpeningkatan upah", r"\bkenaikan upah", r"\bupah buruh", r"\bupah pekerja", r"\btunjangan", r"\bthr", r"\btunjangan hari raya", r"\bbpjs ketenagakerjaan", r"\bjamsostek", r"\bpesangon", r"\buang pesangon", r"\bbonus karyawan", r"\bdemo buruh", r"\bunjuk rasa buruh", r"\bpemogokan", r"\baksi mogok", r"\bmogok kerja", r"\bserikat pekerja", r"\bserikat buruh", r"\bout[\s\-]?sourcing", r"\bpekerja kontrak", r"\bpkwt", r"\bpkwtt", r"\bkontrak kerja", r"\bperjanjian kerja", r"\bhak pekerja", r"\bkesejahteraan buruh", r"\bcuti bersama", r"\blembur", r"\bk3", r"\bkeselamatan kerja"]
+NOISE_WORDS = [r"\bpersib", r"\bliga", r"\bpilkada", r"\bcpns", r"\bsyarat pendaftaran", r"\bgempa", r"\bkecelakaan", r"\bpembunuhan", r"\bnarkoba", r"\bbencana", r"\bpilkada", r"\bkampanye", r"\bcapres", r"\bcawalkot", r"\bpartai", r"\bkpu", r"\bbawaslu", r"\bkampus", r"\buniversitas", r"\binstitut", r"\bpoliteknik", r"\bmahasiswa", r"\bdosen", r"\brektor", r"\bwisuda", r"\bsnbt", r"\bppdb", r"\bseminar", r"\bwebinar", r"\basn", r"\bcpns", r"\bpppk", r"\bmutasi jabatan", r"\brotasi jabatan", r"\bkinerja asn", r"\bsyarat pendaftaran", r"\bcara melamar", r"\blink pendaftaran", r"\bkirim lamaran"]
+TITLE_BLACKLIST = [r"\bvisi", r"\bmisi", r"\btupoksi", r"\bkontak", r"\bjadwal", r"\bindeks", r"\bpegawai", r"\bsejarah", r"\bgallery", r"\bprofil", r"\bbab i", r"\bpower[\s\-]?point", r"\bopen[\s\-]?data", r"\bjurnal", r"\bpengumuman", r"\blayanan", r"\bberanda", r"\bhome", r"\bindex"]
 DOCUMENT_EXTENSIONS = [".pdf", ".doc", ".docx", ".xls", ".xlsx"]
 
 # Source credibility tiers
