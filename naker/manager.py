@@ -1,7 +1,7 @@
 # ============================================================
 # NAKER SENTINEL — Data Manager Module
 # Path: naker/manager.py
-# Handles checkpointing, saving, merging audit files
+# Menghandle checkpointing, saving, deduplication, dan merging hasil audit.
 # ============================================================
 
 import os
@@ -40,10 +40,23 @@ class DataManager:
     def __init__(self, config: dict):
         dm_cfg = config.get("data_management", {})
         proj_cfg = config.get("project", {})
+        self.config = config.get("manager", {})
 
-        self.output_dir = Path(proj_cfg.get("output_dir", "output"))
-        self.checkpoint_dir = Path(proj_cfg.get("checkpoint_dir", "output/checkpoints"))
-        self.audit_dir = Path(proj_cfg.get("audit_dir", "output/audits"))
+        self.output_dir = Path(self.config.get("output_dir", "naker/output"))
+        self.checkpoint_dir = self.output_dir / "checkpoints"
+        self.audit_dir = self.output_dir / "audits"
+
+        for d in [self.output_dir, self.checkpoint_dir, self.audit_dir]:
+            d.mkdir(parents=True, exist_ok=True)
+
+        self._session_id = datetime.now().strftime("%Y%m%d_%H%M%S")
+        self._master_excel_path = self.audit_dir / f"audit_naker_{self._session_id}.xlsx"
+        self.project_identity = proj_cfg.get("name", "Kompilasi Fenomena Ketenagakerjaan")
+        self.system_version = proj_cfg.get("version", "V.66")
+        self._buffer: list[dict] = []
+        self._seen_keys = set()
+        self._article_count = 0
+
         self.checkpoint_interval = dm_cfg.get("checkpoint_interval", 10)
         self.auto_merge = dm_cfg.get("auto_merge", True)
         self.backup_before_merge = dm_cfg.get("backup_before_merge", True)
@@ -51,20 +64,8 @@ class DataManager:
         self.json_indent = dm_cfg.get("json_indent", 2)
         self.csv_delimiter = dm_cfg.get("csv_delimiter", ",")
         self.dedup_field = dm_cfg.get("dedup_field", "url")
-
-        # [BUG FIX] Backup rotation limit — configurable, default 5
         self.max_backup_count = dm_cfg.get("max_backup_count", 5)
 
-        # Ensure directories exist
-        for d in [self.output_dir, self.checkpoint_dir, self.audit_dir]:
-            d.mkdir(parents=True, exist_ok=True)
-
-        self._buffer: list[dict] = []
-        self._session_id = datetime.now().strftime("%Y%m%d_%H%M%S")
-        self._seen_keys = set()
-        self._article_count = 0
-
-        # [NEW] File visited URLs persistent
         self.visited_file = self.output_dir / "visited_url_naker.txt"
         self._load_visited_urls()
 
@@ -125,7 +126,7 @@ class DataManager:
             return False
 
         self._seen_keys.add(key)
-        self._append_visited_url(key)  # [NEW] Langsung catat ke file TXT saat ditemukan
+        self._append_visited_url(key)  
         self._article_count += 1
         return True
 
@@ -188,46 +189,46 @@ class DataManager:
     # --- Final Save ---
 
     def save_final(self, articles: Optional[list[dict]] = None, tag: str = "audit"):
-        """Save final results in configured formats."""
+        """Save final results in configured formats (JSON dan XLSX secara Real-Time/Overwrite)."""
         data = articles if articles is not None else self._buffer
         if not data:
-            logger.warning("No articles to save")
             return {}
 
-        ts = datetime.now().strftime("%Y%m%d_%H%M%S")
         saved_files = {}
+        
+        path_json = self.audit_dir / f"{tag}_{self._session_id}.json"
+        try:
+            with open(path_json, "w", encoding="utf-8") as f:
+                json.dump(data, f, ensure_ascii=False, indent=self.json_indent, default=str)
+            saved_files["json"] = str(path_json)
+        except Exception as e:
+            logger.error(f"JSON save error: {e}")
 
-        if "json" in self.output_formats:
-            path = self.audit_dir / f"{tag}_{self._session_id}_{ts}.json"
-            tmp_path = path.with_suffix(".tmp")
-            try:
-                # [BUG FIX] Atomic write for final save too
-                with open(tmp_path, "w", encoding="utf-8") as f:
-                    json.dump(
-                        data, f,
-                        ensure_ascii=False,
-                        indent=self.json_indent,
-                        default=str,
-                    )
-                os.replace(str(tmp_path), str(path))
-                saved_files["json"] = str(path)
-                logger.info(f"Saved JSON: {path}")
-            except Exception as e:
-                logger.error(f"JSON save error: {e}")
-                try:
-                    if tmp_path.exists():
-                        tmp_path.unlink()
-                except OSError:
-                    pass
-
-        if "csv" in self.output_formats:
-            path = self.audit_dir / f"{tag}_{self._session_id}_{ts}.csv"
-            try:
-                self._save_csv(data, path)
-                saved_files["csv"] = str(path)
-                logger.info(f"Saved CSV: {path}")
-            except Exception as e:
-                logger.error(f"CSV save error: {e}")
+        try:
+            import pandas as pd
+            df = pd.DataFrame(data)
+            
+            rename_map = {
+                "date": "Tanggal Berita",
+                "title": "Judul",
+                "status_geografi": "Status Wilayah",
+                "kategori_kbli": "Sektor KBLI",
+                "dampak_bekerja": "Pekerja Naik/Turun",
+                "dampak_pengangguran": "Pengangguran Naik/Turun",
+                "ringkasan_berita": "Ringkasan Eksekutif",
+                "url": "Sumber Berita (URL)"
+            }
+            df.rename(columns=rename_map, inplace=True)
+            
+            ordered_cols = [c for c in rename_map.values() if c in df.columns]
+            other_cols = [c for c in df.columns if c not in ordered_cols]
+            df = df[ordered_cols + other_cols]
+            
+            df.to_excel(self._master_excel_path, index=False, engine='openpyxl')
+            saved_files["xlsx"] = str(self._master_excel_path)
+            
+        except Exception as e:
+            logger.error(f"Excel (XLSX) save error: {e}")
 
         return saved_files
 

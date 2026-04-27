@@ -147,7 +147,6 @@ SOURCE_SELECTORS = {
     },
 }
 
-# Fallback / generic selectors
 FALLBACK_SELECTORS = {
     "title": [
         "h1.entry-title", "h1.post-title", "h1.title", "h1",
@@ -170,10 +169,6 @@ FALLBACK_SELECTORS = {
     ],
 }
 
-
-# ============================================================
-# Date parsing helpers — BUG FIX: multiple format support
-# ============================================================
 DATE_FORMATS = [
     "%Y-%m-%dT%H:%M:%S%z",
     "%Y-%m-%dT%H:%M:%S.%f%z",
@@ -192,7 +187,6 @@ DATE_FORMATS = [
     "%b %d, %Y",
 ]
 
-# Indonesian month names for pre-processing
 INDO_MONTHS = {
     "januari": "January", "februari": "February", "maret": "March",
     "april": "April", "mei": "May", "juni": "June",
@@ -212,21 +206,17 @@ def parse_date_safe(date_str: str) -> str:
 
     cleaned = date_str.strip()
 
-    # Replace Indonesian month names
     lower = cleaned.lower()
     for indo, eng in INDO_MONTHS.items():
         if indo in lower:
             cleaned = re.sub(indo, eng, cleaned, flags=re.IGNORECASE)
             break
 
-    # Remove common Indonesian prefixes
     cleaned = re.sub(r"^(Senin|Selasa|Rabu|Kamis|Jumat|Sabtu|Minggu),?\s*",
                      "", cleaned, flags=re.IGNORECASE)
 
-    # Remove "WIB", "WITA", "WIT" timezone markers
     cleaned = re.sub(r"\s*(WIB|WITA|WIT)\s*$", "", cleaned, flags=re.IGNORECASE)
 
-    # Try each format
     for fmt in DATE_FORMATS:
         try:
             dt = datetime.strptime(cleaned.strip(), fmt)
@@ -234,7 +224,6 @@ def parse_date_safe(date_str: str) -> str:
         except ValueError:
             continue
 
-    # Try extracting from ISO 8601 with regex
     iso_match = re.search(r"(\d{4}-\d{2}-\d{2})", cleaned)
     if iso_match:
         return iso_match.group(1)
@@ -250,9 +239,7 @@ def clean_text(text: str) -> str:
     """Clean extracted text content."""
     if not text:
         return ""
-    # Remove excessive whitespace
     text = re.sub(r"\s+", " ", text)
-    # Remove common noise patterns
     noise_patterns = [
         r"Baca juga:.*?(?=\.|$)",
         r"BACA JUGA:.*?(?=\.|$)",
@@ -273,7 +260,6 @@ def clean_text(text: str) -> str:
     ]
     for pattern in noise_patterns:
         text = re.sub(pattern, "", text, flags=re.IGNORECASE)
-    # Final cleanup
     text = re.sub(r"\s+", " ", text).strip()
     return text
 
@@ -288,12 +274,10 @@ def generate_summary(content: str, max_length: int = 200) -> str:
 
     clean = content.strip()
 
-    # Try to get first 2 sentences
     sentences = re.split(r"(?<=[.!?])\s+", clean)
     sentences = [s.strip() for s in sentences if len(s.strip()) > 15]
 
     if not sentences:
-        # Fallback: just truncate
         return clean[:max_length].rsplit(" ", 1)[0] + "..." if len(clean) > max_length else clean
 
     summary = sentences[0]
@@ -327,7 +311,6 @@ class ArticleParser:
 
     def _get_selectors(self, source: str) -> dict:
         """Get source-specific selectors or fallback."""
-        # Match source name to selector keys
         for key in SOURCE_SELECTORS:
             if key in source.lower():
                 return SOURCE_SELECTORS[key]
@@ -337,7 +320,6 @@ class ArticleParser:
         """Try multiple CSS selectors, return first match."""
         for selector in selectors:
             try:
-                # Handle meta tags
                 if selector.startswith("meta["):
                     tag = soup.select_one(selector)
                     if tag:
@@ -358,7 +340,6 @@ class ArticleParser:
             try:
                 container = soup.select_one(selector)
                 if container:
-                    # Remove unwanted elements
                     for tag in container.select(
                         "script, style, nav, footer, aside, .ads, "
                         ".advertisement, .social-share, .related-article, "
@@ -410,7 +391,6 @@ class ArticleParser:
 
     def _extract_date(self, soup, selectors: list) -> str:
         """Extract and parse publication date."""
-        # Try datetime attribute first
         for selector in selectors:
             try:
                 tag = soup.select_one(selector)
@@ -424,7 +404,6 @@ class ArticleParser:
             except Exception:
                 continue
 
-        # Try meta tags
         for meta_prop in ["article:published_time", "datePublished", "pubdate"]:
             tag = soup.select_one(f"meta[property='{meta_prop}']") or \
                   soup.select_one(f"meta[name='{meta_prop}']")
@@ -473,50 +452,39 @@ class ArticleParser:
         try:
             selectors = self._get_selectors(result.source)
 
-            # Extract title
             result.title = self._extract_with_selectors(
                 soup, selectors.get("title", FALLBACK_SELECTORS["title"])
             )
             if not result.title:
-                # Try og:title as last resort
                 og = soup.select_one("meta[property='og:title']")
                 if og:
                     result.title = (og.get("content", "") or "").strip()
 
-            # Extract content
             result.content = self._extract_content(
                 soup, selectors.get("content", FALLBACK_SELECTORS["content"])
             )
 
-            # Extract author
             result.author = self._extract_with_selectors(
                 soup, selectors.get("author", FALLBACK_SELECTORS["author"])
             )
 
-            # Extract date
             result.published_date = self._extract_date(
                 soup, selectors.get("date", FALLBACK_SELECTORS["date"])
             )
 
-            # Extract tags
             result.tags = self._extract_tags(
                 soup, selectors.get("tags", FALLBACK_SELECTORS["tags"])
             )
 
-            # Extract images
             result.images = self._extract_images(soup, article.get("url", ""))
 
-            # Word count
             result.word_count = len(result.content.split()) if result.content else 0
 
-            # Auto-generate summary
             result.summary = generate_summary(result.content, self.summary_length)
 
-            # Extract metadata from meta tags
             if self.extract_metadata:
                 result.metadata = self._extract_meta(soup)
 
-            # Quality check
             if result.content and result.word_count >= self.min_word_count:
                 result.parse_success = True
                 self._stats["successful"] += 1
@@ -585,7 +553,6 @@ def extract_article_content(html_content: str, url: str) -> dict:
     
     parsed_data = {"title": "", "text": ""}
     
-    # Lapis 1: Standar Ekstraksi Nasional (Newspaper3k)
     try:
         article = Article(url)
         article.set_html(html_content)
@@ -595,31 +562,25 @@ def extract_article_content(html_content: str, url: str) -> dict:
     except:
         pass
 
-    # Lapis 2: Robust DOM Parsing untuk Jaringan Promedia (Pikiran Rakyat, Ayo Bandung)
     if not parsed_data["text"] or len(parsed_data["text"]) < 150:
         try:
             soup = BeautifulSoup(html_content, "html.parser")
             
-            # Ekstraksi judul darurat
             if not parsed_data["title"]:
                 title_tag = soup.find('h1')
                 parsed_data["title"] = title_tag.get_text(strip=True) if title_tag else "Tanpa Judul"
 
-            # Membidik kontainer berita spesifik media lokal Jawa Barat
             content_div = soup.find('div', class_='read__content') or \
                           soup.find('div', class_='detail__body') or \
                           soup.find('div', class_='post-content') or \
                           soup.find('article')
             
             if content_div:
-                # Membersihkan elemen pengganggu (iklan, skrip, tagar)
                 for tag in content_div(['script', 'style', 'iframe', 'ins', 'a']):
                     tag.decompose()
                 
-                # Menggabungkan sisa teks menjadi narasi bersih
                 parsed_data["text"] = content_div.get_text(separator=' ', strip=True)
                 
-                # Membersihkan spasi berlebih
                 import re
                 parsed_data["text"] = re.sub(r'\s+', ' ', parsed_data["text"]).strip()
         except Exception as e:

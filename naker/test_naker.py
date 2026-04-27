@@ -19,11 +19,10 @@ import time
 import tempfile
 import shutil
 import unittest
-from naker.scraper import NewsScraper, NEWS_SOURCES
+from naker.sentinel import NewsScraper, NEWS_SOURCES
 from pathlib import Path
 from unittest.mock import patch, MagicMock
 
-# ---------- Pastikan import bisa jalan ----------
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from naker.loader import NakerConfig, FileCache, PromptLoader, ConfigLoader, detect_system_profile

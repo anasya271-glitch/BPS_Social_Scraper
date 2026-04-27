@@ -1,7 +1,7 @@
-"""
-sentinel.py - Orchestration pipeline for NAKER SENTINEL.
-Class-based design with staged pipeline: scrape → parse → score → filter → interrogate → save.
-"""
+# ============================================================
+# sentinel.py - Menjalankan pipeline naker secara end-to-end dengan logging terperinci, penanganan error, dan laporan akhir.
+# Desain berbasis class dengan pipeline yang diatur: scrape → parse → score → filter → interrogate → save.
+# ============================================================
 
 import asyncio
 import argparse
@@ -36,7 +36,6 @@ class NakerSentinel:
         """
         self.config = config or {}
         
-        # Penambahan 33 Situs Lengkap (High, Medium, Low Tier)
         self.sites = [
             "bandung.go.id", "tempo.co", "tirto.id", "narasi.tv",
             "ayobandung.com", "pikiran-rakyat.com", "bandung.kompas.com",
@@ -50,7 +49,6 @@ class NakerSentinel:
             "facebook.com", "twitter.com", "instagram.com"
         ]
         
-        # Inisialisasi mesin AI pusat sebagai orkestrator inferensi
         self.model_name = self.config.get("model_name", "bps-naker")
         self.ai_engine = BPS_AI_Engine()
         
@@ -60,22 +58,18 @@ class NakerSentinel:
         
         self.edge_source_dir = str(Path.home() / "AppData" / "Local" / "Microsoft" / "Edge" / "User Data")
 
-        # Setup logging first
         self._setup_logging()
 
-        # Initialize components
         self.scraper = BandungScraper(config.get("scraper", {}))
         self.scorer = RelevanceScorer(config.get("scorer", {}))
         self.manager = DataManager(config.get("manager", {}))
 
-        # Pipeline state
         self.raw_articles: List[Dict[str, Any]] = []
         self.parsed_articles: List[Dict[str, Any]] = []
         self.scored_articles: List[Dict[str, Any]] = []
         self.filtered_articles: List[Dict[str, Any]] = []
         self.interrogated_articles: List[Dict[str, Any]] = []
 
-        # Stats tracking
         self.stats: Dict[str, Any] = {
             "stage_scrape": {},
             "stage_parse": {},
@@ -94,18 +88,15 @@ class NakerSentinel:
         level = getattr(logging, level_str, logging.INFO)
         log_format = log_cfg.get("format", "%(asctime)s [%(levelname)s] %(name)s: %(message)s")
 
-        # Root logger
         root = logging.getLogger()
         root.setLevel(level)
 
-        # Console handler
         if not root.handlers:
             ch = logging.StreamHandler(sys.stdout)
             ch.setLevel(level)
             ch.setFormatter(logging.Formatter(log_format))
             root.addHandler(ch)
 
-        # File handler (optional)
         log_file = log_cfg.get("file")
         if log_file:
             try:
@@ -125,16 +116,13 @@ class NakerSentinel:
         
         t0 = datetime.now(timezone.utc)
         
-        # 1. Discover articles dari radar Google
         discovered = await self.scraper.discover_articles()
         
-        # 2. Cross-Session Deduplication (Filter Memori)
         visited_urls = self.manager.load_visited_urls()
         new_articles = [art for art in discovered if art["url"] not in visited_urls]
         
         logger.info(f"Total Temuan: {len(discovered)} | Sudah Diproses (Dibuang): {len(discovered)-len(new_articles)} | Target Unduh: {len(new_articles)}")
         
-        # Jika tidak ada artikel baru, hentikan dengan mencatat statistik
         if not new_articles:
             logger.warning("Tidak ada artikel baru yang ditemukan. Pipeline dihentikan efisien.")
             duration = (datetime.now(timezone.utc) - t0).total_seconds()
@@ -144,11 +132,9 @@ class NakerSentinel:
             }
             return []
             
-        # 3. Hanya unduh artikel yang benar-benar baru
         fetched = await self.scraper.fetch_all_articles(new_articles)
         successful = [a for a in fetched if a.get("fetch_success")]
 
-        # 4. Pencatatan Statistik (Instrumentation)
         duration = (datetime.now(timezone.utc) - t0).total_seconds()
         self.stats["stage_scrape"] = {
             "discovered": len(discovered),
@@ -177,12 +163,11 @@ class NakerSentinel:
 
         for art in articles:
             try:
-                # [FIX] Heuristic URL Rewriting untuk mem-bypass Pagination CMS & Hidden Nodes
                 target_url = art.get("url", "")
                 if "pikiran-rakyat.com" in target_url or "ayobandung.com" in target_url:
-                    target_url = re.sub(r'/page/\d+', '', target_url)  # Bersihkan suffix /page/2
+                    target_url = re.sub(r'/page/\d+', '', target_url)
                     if "?" not in target_url:
-                        target_url += "?page=all"  # Paksa muat semua teks dalam 1 halaman
+                        target_url += "?page=all"
                 
                 result = extract_article_content(
                     html=art.get("html", ""),
@@ -191,11 +176,8 @@ class NakerSentinel:
                 )
                 art.update(result)
                 
-                # [NEW FIX] Ekstrak konten teks utama untuk Ollama nanti
-                # (Mencoba mencari kunci 'body', 'text', atau fallback ke 'snippet')
                 art['content'] = art.get('body') or art.get('text') or art.get('snippet') or ""
                 
-                # [NEW FIX] Merapikan format tanggal menggunakan parser BPS
                 raw_date = art.get("published") or art.get("date") or ""
                 art["date"] = parse_date_safe(raw_date)
 
@@ -263,18 +245,15 @@ class NakerSentinel:
         reasons_dropped: Dict[str, int] = Counter()
 
         for art in articles:
-            # Check relevance score
             if art.get("relevance_score", 0) < threshold:
                 reasons_dropped["below_threshold"] += 1
                 continue
 
-            # Check body length
             body = art.get("body", "")
             if len(body) < min_body_len:
                 reasons_dropped["body_too_short"] += 1
                 continue
 
-            # Check article age
             date_parsed = art.get("date_parsed")
             if date_parsed:
                 try:
@@ -283,7 +262,7 @@ class NakerSentinel:
                         reasons_dropped["too_old"] += 1
                         continue
                 except TypeError:
-                    pass  # Can't compute age — keep the article
+                    pass
 
             filtered.append(art)
 
@@ -313,14 +292,12 @@ class NakerSentinel:
         import json
         import re
 
-        # Ekstrak konten untuk dianalisis Ollama
         text = article.get("content") or article.get("snippet") or ""
             
         if not text:
             article["status_geografi"] = "Error: Teks Kosong"
             return article
             
-        # Smart Truncate (Maksimal 1500 karakter, amankan bukti lokasi "Bandung")
         text_lower = text.lower()
         if len(text) > 1500:
             first_chunk = text[:800]
@@ -335,7 +312,6 @@ class NakerSentinel:
         else:
             truncated_text = text
 
-        # Hukum Absolut Prompt NAKER BPS
         custom_prompt = f"""
         Lakukan audit investigatif pada teks berita berikut untuk laporan Fenomena Ketenagakerjaan BPS Kota Bandung.
         Keluarkan format JSON MURNI dengan keys:
@@ -347,11 +323,13 @@ class NakerSentinel:
         6. "confidence_score" (0-100, seberapa yakin Anda dengan analisis dampak naik/turun ini berdasarkan teks).
         
         ATURAN ANALISIS (HUKUM ABSOLUT):
-        - Status Geofencing HARUS "Valid Kota Bandung" JIKA peristiwa terjadi secara fisik di Kota Bandung.
+        - Status Geofencing HARUS "Valid Kota Bandung" JIKA peristiwa terjadi secara fisik di Kota Bandung. Jika hanya menyebutkan "Jawa Barat" tanpa menyebut "Kota Bandung" secara eksplisit, maka statusnya adalah "Out of Jurisdiction".
         - Pekerja NAIK & Pengangguran TURUN jika: Pembukaan pabrik, job fair besar, ekspansi bisnis, proyek infrastruktur jalan.
         - Pekerja TURUN & Pengangguran NAIK jika: PHK massal, pabrik tutup, gulung tikar, gagal panen, omzet anjlok drastis.
         - Jika hanya membahas isu normatif (Tuntutan UMK, Aturan THR, Demo tanpa PHK), status keduanya adalah '3 Tetap'.
-        - TOLAK JIKA (Irrelevant Context): Hanya berita info lowongan kerja individual (cara melamar, link loker, syarat CPNS) yang tidak berdampak pada ekonomi makro. Atau jika peristiwa tidak terjadi di Bandung.
+        - TOLAK JIKA (Irrelevant Context): Berita TIDAK ADA hubungannya dengan fenomena ketenagakerjaan makro (contoh: deskripsi jenis kursi kereta, kasus kriminalitas, atau tips harian). Anda WAJIB mengisi "status_geografi" dengan "Irrelevant Context" dan "kategori_kbli" dengan "N/A". Berita info lowongan kerja individual (cara melamar, link loker) juga harus ditolak.
+        - [PENTING] Jika berita tentang "Job Fair Umum", "Bursa Kerja Lintas Sektor", atau "Lowongan Kerja Ribuan Orang", maka isi "kategori_kbli" dengan "N/A (Bursa Kerja Umum)", BUKAN Perdagangan, Penyewaan, atau Industri spesifik.
+
         
         Teks Berita:
         {truncated_text}
@@ -371,7 +349,6 @@ class NakerSentinel:
             if response.status_code == 200:
                 raw_json = response.json().get("response", "{}")
                 try:
-                    # [FIX] Safety Net: Mencegah NoneType Crash jika Ollama gagal/timeout
                     audit_result = json.loads(raw_json) if raw_json else {}
                     if not isinstance(audit_result, dict):
                         audit_result = {}
@@ -406,21 +383,14 @@ class NakerSentinel:
 
         for art in articles:
             try:
-                # Ini akan mendaftarkan artikel ke dalam memori manager.py
                 self.manager.save_article(art)
                 saved_count += 1
             except Exception as e:
                 logger.error(f"Failed to save article '{art.get('title', '?')}': {e}")
 
-        # Checkpoint JSON setelah batch save
         self.manager.save_checkpoint()
         
-        # [NEW FIX] Trigger pembuatan file Excel BPS!
         try:
-            # Jika di dalam manager.py Anda ada fungsi untuk export Excel, panggil di sini:
-            # self.manager.export_to_excel() # <- Uncomment ini jika Anda punya fungsi tsb di manager.py
-            
-            # Jika TIDAK ADA fungsi export_to_excel di manager.py, kita buat excel-nya secara mandiri di sini:
             import pandas as pd
             excel_dir = Path("data/naker/exports")
             excel_dir.mkdir(parents=True, exist_ok=True)
@@ -428,9 +398,7 @@ class NakerSentinel:
             
             df = pd.DataFrame(articles)
             
-            # Merapikan kolom sesuai format BPS
             if not df.empty:
-                # Mapping kunci dictionary ke nama kolom Excel yang rapi
                 rename_map = {
                     "ringkasan_berita": "Ringkasan Berita/Informasi Utama",
                     "url": "Sumber Berita (URL)",
@@ -444,7 +412,6 @@ class NakerSentinel:
                 }
                 df = df.rename(columns=rename_map)
                 
-                # Memilih kolom yang ingin ditampilkan (jika ada)
                 expected_cols = list(rename_map.values())
                 available_cols = [c for c in expected_cols if c in df.columns]
                 
@@ -454,7 +421,6 @@ class NakerSentinel:
         except Exception as e:
             logger.error(f"Gagal membuat file Excel: {e}")
 
-        # Generate text report (Biarkan bawaan aslinya tetap ada)
         report_cfg = self.config.get("report", {})
         output_dir = Path(report_cfg.get("output_dir", "reports"))
         output_dir.mkdir(parents=True, exist_ok=True)
@@ -494,11 +460,9 @@ class NakerSentinel:
         self.start_time = datetime.now(timezone.utc)
         logger.info("NAKER SENTINEL pipeline starting (Streaming Mode)...")
         
-        # 1. Discover & Filter Memori
         raw_discovered = await self.scraper.discover_articles()
         visited_urls = self.manager.load_visited_urls()
         
-        # 2. Kelompokkan Berdasarkan Situs (Memproses 1 site sampai beres, baru pindah)
         site_groups = defaultdict(list)
         for art in raw_discovered:
             if art["url"] not in visited_urls:
@@ -511,7 +475,6 @@ class NakerSentinel:
 
         logger.info(f" [>] Membidik {total_targets} artikel baru dari {len(site_groups)} situs.")
         
-        # 3. Nyalakan Browser
         await self.scraper.start_browser()
         final_articles = []
         checkpoint_count = 0
@@ -526,7 +489,6 @@ class NakerSentinel:
                     clickable_link = f"\033]8;;{url}\033\\[BACA ARTIKEL]\033]8;;\033\\"
                     
                     try:
-                        # 1. PRE-FLIGHT CHECK (Mencegah buang-buang kuota internet)
                         rejected, reason = self.scorer.is_rejected_preflight(art["title"], url)
                         if rejected:
                             print(f" -> {title_short}...")
@@ -535,20 +497,17 @@ class NakerSentinel:
 
                         print(f" [>] Mengekstraksi [{site}]: {title_short}...")
 
-                        # 2. FETCH HTML
                         html_data = await self.scraper.fetch_single_article(url)
                         if not html_data.get("fetch_success"):
                             print(f"     [FAILED] Gagal mengunduh halaman atau Timeout. {clickable_link}")
                             continue
                             
-                        # 3. PARSE
                         parsed = extract_article_content(html_data["html"], url)
                         text_content = parsed.get("text", "")
                         if not text_content or len(text_content) < 150:
                             print(f"     [SKIPPED] Konten terlalu pendek atau dilindungi paywall. {clickable_link}")
                             continue
                             
-                        # 4. PREFLIGHT SCORE
                         score, breakdown = self.scorer.calculate_v66_score(parsed.get("title", ""), url, text_content)
                         if score < 20: 
                             # Mengambil alasan dari breakdown (misal: "Noise/Kriminal (-30)")
@@ -556,20 +515,16 @@ class NakerSentinel:
                             print(f"     [SKIPPED] {skip_reason}. {clickable_link}")
                             continue
                             
-                        # 5. AI INTERROGATE (Lolos semua filter, AI dipanggil)
                         truncated = text_content[:1500] 
                         
-                        # [FIX] Catcher Khusus Ollama: Mencegah NoneType Crash dan merusak Browser
                         try:
                             ai_result = self.ai_engine.classify_naker(truncated)
                             
-                            # Validasi apakah AI Engine menembak kosong
                             if not ai_result or not isinstance(ai_result, dict):
                                 raise ValueError("AI Engine mengembalikan Null/Bukan Dictionary")
                                 
                         except Exception as ai_error:
                             print(f"     [WARNING] Ollama Offline/Timeout: {ai_error}")
-                            # Injeksi data cadangan agar pipeline berlanjut dengan aman
                             ai_result = {
                                 "status_geografi": "Error: Ollama Offline",
                                 "ringkasan_berita": "Gagal diekstrak karena Ollama Offline",
@@ -579,10 +534,8 @@ class NakerSentinel:
                                 "confidence_score": 0
                             }
                         
-                        # LOG ISOLATED (Lengkap dengan kotak)
                         self._print_isolated_log(site, parsed.get("title", ""), url, score, ai_result)
                         
-                        # SIMPAN & CHECKPOINT
                         final_data = {**art, **parsed, "score": score, **ai_result}
                         final_articles.append(final_data)
                         self.manager.save_visited_urls_delta({url})
@@ -593,17 +546,15 @@ class NakerSentinel:
                             print(f"  [√] Incremental Checkpoint tersimpan ({checkpoint_count} artikel).")
                             
                     except Exception as loop_e:
-                        # Menangkap error di level artikel agar pipeline tidak mati total
                         print(f"     [ERROR] Insiden pada eksekusi artikel: {loop_e}. {clickable_link}")
-                        # Jika context tertutup, bersihkan sisa memori sebelum me-restart browser
                         if "Target page, context or browser has been closed" in str(loop_e):
                             print(f"     [!] Browser Context mati. Mencoba me-restart browser untuk situs selanjutnya...")
                             try:
                                 await self.scraper.close_browser()
                             except:
-                                pass # Abaikan jika sudah terlanjur mati
+                                pass
                             import asyncio
-                            await asyncio.sleep(2) # Beri jeda 2 detik agar sistem operasi melepas file lock Edge
+                            await asyncio.sleep(2)
                             await self.scraper.start_browser()
                         
         except KeyboardInterrupt:
@@ -622,7 +573,6 @@ class NakerSentinel:
         kbli = ai_result.get("kategori_kbli", "N/A")
         ringkasan = ai_result.get("ringkasan_berita", "-")
         
-        # ANSI Escape Sequence: Membuat teks terminal bisa di-klik pada VS Code / Windows Terminal
         clickable_link = f"\033]8;;{url}\033\\[BACA ARTIKEL]\033]8;;\033\\"
         
         print(f"\n" + "="*70)
@@ -847,14 +797,11 @@ def main():
     parser = build_cli()
     args = parser.parse_args()
 
-    # Load configuration
     config = load_config(args.config)
 
-    # Override logging level if verbose
     if args.verbose:
         config.setdefault("logging", {})["level"] = "DEBUG"
 
-    # Sinkronisasi parameter CLI ke konfigurasi scraper
     config.setdefault("scraper", {})
     config["scraper"].update({
         "mode": args.mode,
@@ -862,11 +809,8 @@ def main():
         "end": args.end
     })
 
-    # Create sentinel and run
-    # Create sentinel and run
     sentinel = NakerSentinel(config)
     
-    # 1. Eksekusi Pipeline Utama
     try:
         asyncio.run(sentinel.run())
     except KeyboardInterrupt:
@@ -875,11 +819,9 @@ def main():
         print("[SYSTEM] Pipeline NAKER dihentikan secara aman.")
         print("[SYSTEM] Progress Anda tidak hilang. History URL telah disandikan di 'visited_url_naker.txt'.")
         print("="*60 + "\n")
-        # [FIX] sys.exit(0) dihapus dari sini agar instruksi merge tetap bisa dijalankan meskipun diinterupsi
     except Exception as e:
         logger.error(f"[FATAL] Pipeline gagal: {e}")
 
-    # 2. Eksekusi Prosedur Penggabungan (Jika Diminta)
     if args.merge:
         print("\n[SYSTEM] Memulai Prosedur Penggabungan Data Audit...")
         try:
@@ -887,7 +829,6 @@ def main():
         except Exception as e:
             logger.error(f"Gagal menggabungkan file audit: {e}")
 
-    # 3. Keluar dengan Bersih
     sys.exit(0)
 
 if __name__ == "__main__":

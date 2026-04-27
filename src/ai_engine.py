@@ -15,15 +15,17 @@ class BPS_AI_Engine:
     def _execute_query(self, model_key, custom_prompt):
         """Transport layer untuk mengirim prompt ke Ollama."""
         try:
+            target_model = self.models.get(model_key, model_key)
+            
             response = ollama.chat(
-                model=self.models[model_key],
+                model=target_model,
                 messages=[{'role': 'user', 'content': custom_prompt}],
                 format='json',
                 options={'temperature': 0.1} # Menjaga konsistensi sesuai SOP BPS
             )
             return json.loads(response['message']['content'])
         except Exception as e:
-            logger.error(f"Koneksi Ollama Gagal ({model_key}): {e}")
+            logger.error(f"Koneksi Ollama Gagal ({model_key} -> {target_model}): {e}")
             return None
 
     def classify_naker(self, article_text: str) -> dict:

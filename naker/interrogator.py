@@ -1,7 +1,7 @@
 # ============================================================
-# NAKER SENTINEL — AI Interrogator Module (Bug-Fixed)
+# NAKER SENTINEL — Modul AI Interrogator
 # Path: naker/interrogator.py
-# Handles AI-powered article analysis via Ollama/Llama
+# Menghandle analisis artikel dengan AI via Ollama/Llama
 # ============================================================
 
 import json
@@ -32,12 +32,10 @@ class AIInterrogator:
         self.batch_size = intg_cfg.get("batch_size", 5)
         self.max_content_length = intg_cfg.get("max_content_length", 6000)
 
-        # Load prompt template
         prompt_dir = Path(intg_cfg.get("prompt_dir", "naker/prompts"))
         prompt_file = intg_cfg.get("analysis_prompt", "analysis.txt")
         self.prompt_template = self._load_prompt(prompt_dir / prompt_file)
 
-        # FIX [Race Condition]: asyncio.Lock to prevent duplicate sessions
         self._session = None
         self._session_lock = asyncio.Lock()
 
@@ -49,7 +47,6 @@ class AIInterrogator:
             "parse_errors": 0,
         }
 
-    # --- Context manager support ---
     async def __aenter__(self):
         await self._ensure_session()
         return self
@@ -57,7 +54,6 @@ class AIInterrogator:
     async def __aexit__(self, exc_type, exc_val, exc_tb):
         await self.close()
 
-    # --- Prompt loading ---
     def _load_prompt(self, path: Path) -> str:
         """Load prompt template from file."""
         try:
@@ -83,7 +79,6 @@ class AIInterrogator:
             "indikator_bps, timeline, metadata_analisis."
         )
 
-    # --- Session management (FIX: race-condition-safe) ---
     async def _ensure_session(self):
         """Lazy-init aiohttp session — guarded by lock to prevent race condition."""
         if self._session and not self._session.closed:
@@ -109,20 +104,16 @@ class AIInterrogator:
                 self._session = None
                 logger.debug("Closed aiohttp session")
 
-    # --- Prompt building ---
     def _build_prompt(self, article: dict) -> str:
         """Fill prompt template with article data — with sanitization."""
         content = article.get("content", "") or ""
-        # Truncate overly long content to avoid token limits
         max_len = self.max_content_length
         if len(content) > max_len:
             content = content[:max_len] + "\n\n[...konten dipotong karena terlalu panjang...]"
 
-        # Sanitize fields to prevent template injection via stray braces
         def safe(val: str) -> str:
             return str(val).replace("{", "{{").replace("}", "}}")
 
-        # Default categories list — override via config if needed
         default_categories = (
             "PHK, Upah, Pengangguran, Lowongan_Kerja, Investasi_Tenaga_Kerja, "
             "Pelatihan_Keterampilan, Regulasi_Ketenagakerjaan, Migrasi_Pekerja, "
@@ -150,7 +141,6 @@ class AIInterrogator:
                 f"Hasilkan analisis dalam format JSON."
             )
 
-    # --- Ollama API call (FIX: granular timeout + jitter backoff) ---
     async def _call_ollama(self, prompt: str) -> Optional[str]:
         """Send request to Ollama API with jitter backoff."""
         await self._ensure_session()
@@ -187,14 +177,12 @@ class AIInterrogator:
                 logger.warning(f"Ollama error (attempt {attempt}): {e}")
 
             if attempt < self.max_retries:
-                # Exponential backoff with jitter to avoid thundering herd
                 base_delay = 2 ** attempt
                 jitter = random.uniform(0, base_delay * 0.5)
                 await asyncio.sleep(base_delay + jitter)
 
         return None
 
-    # --- Response parsing (FIX: ReDoS-safe) ---
     @staticmethod
     def _find_balanced_json(text: str) -> Optional[str]:
         """Find the first balanced { ... } block — ReDoS-safe, no greedy regex."""
@@ -233,16 +221,13 @@ class AIInterrogator:
 
         stripped = raw.strip()
 
-        # 1) Try direct parse
         try:
             return json.loads(stripped)
         except json.JSONDecodeError:
             pass
 
-        # 2) Try extracting from markdown fences (simple, non-greedy find)
         fence_start = stripped.find("```")
         if fence_start != -1:
-            # Skip the opening fence line
             block_start = stripped.find("\n", fence_start)
             if block_start != -1:
                 fence_end = stripped.find("```", block_start)
@@ -253,7 +238,6 @@ class AIInterrogator:
                     except json.JSONDecodeError:
                         pass
 
-        # 3) Balanced brace extraction (replaces vulnerable greedy regex)
         json_str = self._find_balanced_json(stripped)
         if json_str:
             try:
@@ -265,7 +249,6 @@ class AIInterrogator:
         logger.error(f"Failed to parse LLM response: {stripped[:300]}...")
         return None
 
-    # --- Core interrogation ---
     async def interrogate(self, article: dict) -> dict:
         """Analyze a single article via LLM."""
         self._stats["total_requests"] += 1
@@ -287,7 +270,6 @@ class AIInterrogator:
             self._stats["total_time"] += elapsed
             return self._empty_analysis(article, "Gagal parsing respons LLM")
 
-        # Attach metadata
         analysis["_meta"] = {
             "model": self.model,
             "elapsed_seconds": elapsed,
@@ -316,7 +298,6 @@ class AIInterrogator:
         except Exception as e:
             logger.error(f"Batch interrogation error: {e}")
 
-        # Convert exceptions to empty analyses
         final = []
         for i, r in enumerate(results):
             if isinstance(r, BaseException):
@@ -333,7 +314,6 @@ class AIInterrogator:
         )
         return final
 
-    # --- Helpers ---
     @staticmethod
     def _empty_analysis(article: dict, reason: str) -> dict:
         """Return a structured empty analysis when AI fails."""

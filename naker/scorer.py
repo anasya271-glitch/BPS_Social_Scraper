@@ -1,7 +1,7 @@
 # ============================================================
 # NAKER SENTINEL — Scorer Module
 # Path: naker/scorer.py
-# Relevance scoring & pre-flight article checks
+# Skoring relevansi & pengecekan artikel secara pre-flight sebelum masuk ke tahap audit AI. 
 # ============================================================
 
 import re
@@ -58,23 +58,23 @@ for _pat in NEGATIVE_PATTERNS:
         logger.warning(f"Invalid negative regex pattern '{_pat}': {_e}")
 
 # ============================================================
-# V66 SMART SCORING CONFIGURATION (BPS-NAKER V66)
+# SCORING CONFIGURATION
 # ============================================================
 SCORING_MATRIX = {
-    'explicit_kota_bandung': 40,      # "Kota Bandung", "Pemkot Bandung"
-    'kecamatan_mention': 30,          # Cicendo, Coblong, etc
-    'bandung_generic': 20,            # Just "Bandung"
-    'bandung_with_context': 35,       # "Bandung" + street/landmark
-    'naker_explicit_3plus': 40,       # >=3 keywords
-    'naker_explicit_2': 30,           # 2 keywords
-    'naker_explicit_1': 20,           # 1 keyword
-    'naker_euphemism': 35,            # Indirect terms
-    'blacklist_strong': -60,          # "Kabupaten Bandung" + blacklist
-    'blacklist_weak': -30,            # Province mention
-    'noise_detected': -25,            # Spam/academic
-    'dual_mention_unclear': -15,      # Kota+Kab both mentioned ambiguously
-    'domain_credibility': 10,         # Kompas, Tempo, govt
-    'title_match': 10,                # Title has geo+naker
+    'explicit_kota_bandung': 40,      
+    'kecamatan_mention': 30,          
+    'bandung_generic': 20,            
+    'bandung_with_context': 35,       
+    'naker_explicit_3plus': 40,    
+    'naker_explicit_2': 30,          
+    'naker_explicit_1': 20,     
+    'naker_euphemism': 35,           
+    'blacklist_strong': -60,       
+    'blacklist_weak': -30,            
+    'noise_detected': -25,           
+    'dual_mention_unclear': -15,      
+    'domain_credibility': 10,         
+    'title_match': 10,                
 }
 
 GEOGRAPHY = {
@@ -137,9 +137,6 @@ NOISE_WORDS = [r"\bpersib", r"\bliga", r"\bpilkada", r"\bcpns", r"\bsyarat penda
 TITLE_BLACKLIST = [r"\bvisi", r"\bmisi", r"\btupoksi", r"\bkontak", r"\bjadwal", r"\bindeks", r"\bpegawai", r"\bsejarah", r"\bgallery", r"\bprofil", r"\bbab i", r"\bpower[\s\-]?point", r"\bopen[\s\-]?data", r"\bjurnal", r"\bpengumuman", r"\blayanan", r"\bberanda", r"\bhome", r"\bindex"]
 DOCUMENT_EXTENSIONS = [".pdf", ".doc", ".docx", ".xls", ".xlsx"]
 
-# Source credibility tiers
-# [BUG FIX] Added missing "low" tier that was referenced
-# in _score_credibility() but never defined — caused KeyError
 SOURCE_CREDIBILITY = {
     "high": [
         "bandung.go.id", "tempo.co", "tirto.id", "narasi.tv",
@@ -185,7 +182,6 @@ class ScoredArticle:
     content: str = ""
     word_count: int = 0
 
-    # Scores (0.0 – 1.0)
     keyword_score: float = 0.0
     geographic_score: float = 0.0
     recency_score: float = 0.0
@@ -193,11 +189,9 @@ class ScoredArticle:
     credibility_score: float = 0.0
     negative_penalty: float = 0.0
 
-    # Composite
     total_score: float = 0.0
     relevance_label: str = "low"  # low / medium / high
 
-    # Detail
     matched_keywords: List[str] = field(default_factory=list)
     matched_geo: List[str] = field(default_factory=list)
     penalties: List[str] = field(default_factory=list)
@@ -223,11 +217,6 @@ class ScoredArticle:
             "penalties": self.penalties,
         }
 
-
-# ============================================================
-# Date parsing helper
-# [BUG FIX] Robust multi-format + Indonesian month names
-# ============================================================
 DATE_FORMATS = [
     "%Y-%m-%dT%H:%M:%S%z",
     "%Y-%m-%dT%H:%M:%S.%f%z",
@@ -262,11 +251,9 @@ def parse_date_robust(date_str: str) -> Optional[datetime]:
 
     cleaned = date_str.strip()
 
-    # Remove Indonesian timezone markers
     cleaned = re.sub(r"\s*(WIB|WITA|WIT)\s*$", "", cleaned, flags=re.IGNORECASE)
     cleaned = cleaned.strip()
 
-    # [BUG FIX] Normalize Indonesian month names to English
     cleaned_lower = cleaned.lower()
     for indo_month, eng_month in _INDONESIAN_MONTHS.items():
         if indo_month in cleaned_lower:
@@ -276,17 +263,14 @@ def parse_date_robust(date_str: str) -> Optional[datetime]:
             )
             break
 
-    # Collapse excess whitespace
     cleaned = re.sub(r"\s+", " ", cleaned).strip()
 
-    # Try each known format
     for fmt in DATE_FORMATS:
         try:
             return datetime.strptime(cleaned, fmt)
         except ValueError:
             continue
 
-    # Fallback: extract just the ISO date portion
     iso_match = re.search(r"(\d{4}-\d{2}-\d{2})", cleaned)
     if iso_match:
         try:
@@ -294,7 +278,6 @@ def parse_date_robust(date_str: str) -> Optional[datetime]:
         except ValueError:
             pass
 
-    # [BUG FIX] Try dateutil as last resort if available
     try:
         from dateutil import parser as dateutil_parser
         return dateutil_parser.parse(cleaned, fuzzy=True)
@@ -365,7 +348,6 @@ class RelevanceScorer:
                 secondary_hits += 1
                 matched.append(kw)
 
-        # [BUG FIX] Guard against division-by-zero
         max_primary = max(len(PRIMARY_KEYWORDS), 1)
         max_secondary = max(len(SECONDARY_KEYWORDS), 1)
 
@@ -374,7 +356,6 @@ class RelevanceScorer:
 
         score = (primary_ratio * 0.75) + (secondary_ratio * 0.25)
 
-        # Boost: title contains primary keyword
         return min(score, 1.0), matched
 
     def _score_geographic(self, text: str) -> Tuple[float, List[str]]:
@@ -402,17 +383,15 @@ class RelevanceScorer:
         """Score based on article freshness."""
         parsed = parse_date_robust(date_str)
         if parsed is None:
-            return 0.3  # Unknown date gets mediocre score
+            return 0.3
 
         now = datetime.now()
-        # Make both offset-naive for comparison
         if parsed.tzinfo is not None:
             parsed = parsed.replace(tzinfo=None)
 
         age_days = (now - parsed).days
 
         if age_days < 0:
-            # Future date — probably parse error; treat as recent
             return 0.8
         if age_days <= 1:
             return 1.0
@@ -434,13 +413,11 @@ class RelevanceScorer:
         content = article.get("content") or article.get("title") or ""
         word_count = article.get("word_count", 0)
 
-        # [BUG FIX] Auto-compute word_count if missing/zero
         if word_count <= 0 and content:
             word_count = len(content.split())
 
-        score = 0.5  # baseline
+        score = 0.5
 
-        # Word count factor
         if word_count >= 500:
             score += 0.3
         elif word_count >= 200:
@@ -448,12 +425,10 @@ class RelevanceScorer:
         elif word_count < 100:
             score -= 0.2
 
-        # Has a meaningful title
         title = article.get("title") or ""
         if len(title) > 20:
             score += 0.1
 
-        # Content not suspiciously short
         if content and len(content) > 300:
             score += 0.1
 
@@ -474,8 +449,6 @@ class RelevanceScorer:
             if domain in source_lower:
                 return 0.6
 
-        # [BUG FIX] Original code referenced SOURCE_CREDIBILITY["low"]
-        # which did not exist, causing KeyError. Now uses .get() with fallback.
         for domain in SOURCE_CREDIBILITY.get("low", []):
             if domain in source_lower:
                 return 0.2
@@ -491,7 +464,6 @@ class RelevanceScorer:
         penalty = 0.0
         text_lower = text.lower()
 
-        # Check compiled negative regexes
         for pat in _COMPILED_NEGATIVES:
             try:
                 if pat.search(text_lower):
@@ -501,7 +473,6 @@ class RelevanceScorer:
                 logger.debug(f"Regex search error: {e}")
                 continue
 
-        # Check noise keywords
         for kw in NOISE_WORDS:
             if kw.lower() in text_lower:
                 penalties.append(f"noise:{kw}")
@@ -523,13 +494,11 @@ class RelevanceScorer:
             word_count=article.get("word_count", 0),
         )
 
-        # [BUG FIX] Auto-compute word_count from content if missing
         if sa.word_count <= 0 and sa.content:
             sa.word_count = len(sa.content.split())
 
         combined_text = f"{sa.title} {sa.content}".strip()
 
-        # Sub-scores
         sa.keyword_score, sa.matched_keywords = self._score_keywords(combined_text)
         sa.geographic_score, sa.matched_geo = self._score_geographic(combined_text)
         sa.recency_score = self._score_recency(sa.published_date)
@@ -537,7 +506,6 @@ class RelevanceScorer:
         sa.credibility_score = self._score_credibility(sa.source)
         sa.negative_penalty, sa.penalties = self._detect_negative(combined_text)
 
-        # Weighted composite
         w = self.weights
         raw = (
             sa.keyword_score * w.get("keyword_relevance", 0.35)
@@ -547,10 +515,8 @@ class RelevanceScorer:
             + sa.quality_score * w.get("content_quality", 0.15)
         )
 
-        # Apply negative penalty
         sa.total_score = max(raw - sa.negative_penalty, 0.0)
 
-        # Apply additional penalties
         if sa.word_count < 50:
             sa.total_score = max(sa.total_score + self.penalty_low_wc, 0.0)
             sa.penalties.append("low_word_count")
@@ -559,7 +525,6 @@ class RelevanceScorer:
             sa.total_score = max(sa.total_score + self.penalty_no_date, 0.0)
             sa.penalties.append("no_date")
 
-        # Classify
         if sa.total_score >= self.high_threshold:
             sa.relevance_label = "high"
             self._stats["high_relevance"] += 1
@@ -611,9 +576,6 @@ class RelevanceScorer:
         scored = self.score(article)
         return scored.to_dict()
 
-    # ============================================================
-    # V66 SMART LOGIC — Pindahan dari src/naker_scraper.py
-    # ============================================================
     def _compile_v66_patterns(self) -> Dict[str, List[re.Pattern]]:
         """Pre-compile patterns dari V66 untuk performa maksimal."""
         return {
@@ -633,7 +595,6 @@ class RelevanceScorer:
         breakdown = {}
         combined = f"{title} {url} {text}".lower()
 
-        # GEOGRAPHIC SCORING (Max 40)
         if any(p.search(combined) for p in self.v66_patterns['strict_anchors']):
             score += SCORING_MATRIX['explicit_kota_bandung']
             breakdown['geo'] = "Explicit Kota Bandung (+40)"
@@ -647,7 +608,6 @@ class RelevanceScorer:
             score += SCORING_MATRIX['bandung_generic']
             breakdown['geo'] = "Generic Bandung (+20)"
 
-        # NAKER SCORING (Max 40)
         naker_hits = (
             sum(1 for p in self.v66_patterns['naker_positif'] if p.search(combined)) +
             sum(1 for p in self.v66_patterns['naker_negatif'] if p.search(combined)) +
@@ -660,7 +620,6 @@ class RelevanceScorer:
             score += SCORING_MATRIX['naker_explicit_1']
             breakdown['naker'] = "Naker Weak (+20)"
 
-        # PENALTIES
         if any(p.search(combined) for p in self.v66_patterns['blacklist']):
             score += SCORING_MATRIX['blacklist_strong']
             breakdown['penalty'] = "Out of Jurisdiction (-60)"
@@ -669,37 +628,40 @@ class RelevanceScorer:
 
     def is_rejected_preflight(self, title: str, url: str) -> Tuple[bool, str]:
         """Audit cepat sebelum mengunduh seluruh isi artikel (BPS V66 Standard)."""
-        # [FIX] Normalisasi absolut: Mencegah TypeError pada Regex jika title/url bernilai None
         title_lower = str(title or "").lower()
         url_lower = str(url or "").lower()
         
-        # 1. Cek Ekstensi Dokumen
         if any(url_lower.endswith(ext) for ext in DOCUMENT_EXTENSIONS):
             return True, "Ekstensi Dokumen Non-Naratif"
         
-        # 2. Cek Title Blacklist
-        if any(b in title_lower for b in TITLE_BLACKLIST):
-            return True, "Halaman Statis/Administratif"
+        expanded_blacklist = TITLE_BLACKLIST + [
+            r"\bkereta", r"\btiket", r"\bkursi", r"\bkriminal", r"\bkecelakaan", 
+            r"\bpembunuhan", r"\bnapi", r"\bpencabulan", r"\bbansos"
+        ]
+        if any(b in title_lower for b in expanded_blacklist):
+            return True, "Halaman Statis/Irrelevant"
         
-        # 3. Quick Score Check (Hanya Judul & URL)
         quick_score = 0
         combined = f"{title_lower} {url_lower}"
         
         def check_smart_keywords(kws):
             for kw in kws:
-                # Pastikan kw adalah string untuk menghindari error lain
                 if not isinstance(kw, str): continue
                 smart_kw = kw.replace(" ", r"[\s\-]?")
                 try:
                     if re.search(smart_kw, combined):
                         return True
                 except re.error as e:
-                    # Abaikan kata kunci yang memiliki syntax Regex rusak (misal: \o) dan lanjutkan ke kata berikutnya
                     pass
             return False
             
-        # Penambahan leksikon krusial
-        expanded_primary = PRIMARY_KEYWORDS + ["loker", "bursa kerja", "rekrutmen", "job fair", "lowongan", "phk", "pemutusan hubungan kerja", "dirumahkan", "pengangguran"]
+        expanded_primary = PRIMARY_KEYWORDS + [
+            r"\bloker", r"\bbursa kerja", r"\brekrutmen", r"\bjob[\s\-]?fair", r"\blowongan", r"\bphk", 
+            r"\bpemutusan hubungan kerja", r"\bdirumahkan", r"\bpengangguran",
+            r"\bgaji", r"\bupah", r"\bhonorer", r"\bpegawai", r"\bdikontrak", r"\bumk", r"\bumr",
+            r"\bserikat pekerja", r"\bbpjs ketenagakerjaan", r"\bdisnaker", r"\btka", r"\bpkwt",
+            r"\bmagang"
+        ]
         
         if check_smart_keywords(expanded_primary):
             quick_score += 20
@@ -707,7 +669,6 @@ class RelevanceScorer:
         if check_smart_keywords(SECONDARY_KEYWORDS):
             quick_score += 10
             
-        # MELONGGARKAN AMBANG BATAS: Turun dari 20 ke 10 agar berita ekonomi makro (Sekunder) tidak terbuang
         if quick_score < 10:
             return True, f"Relevance Score Terlalu Rendah ({quick_score}/100)"
             

@@ -205,7 +205,6 @@ class ConfigLoader:
                 logger.warning(f"Config file not found: {self.config_path}")
             self.config = {}
 
-        # Apply system profile overrides
         profile_overrides = NakerConfig.get_profile(self.profile)
         if profile_overrides:
             self._deep_merge(self.config, profile_overrides)
