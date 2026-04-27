@@ -558,7 +558,26 @@ class NakerSentinel:
                             
                         # 5. AI INTERROGATE (Lolos semua filter, AI dipanggil)
                         truncated = text_content[:1500] 
-                        ai_result = self.ai_engine.classify_naker(truncated)
+                        
+                        # [FIX] Catcher Khusus Ollama: Mencegah NoneType Crash dan merusak Browser
+                        try:
+                            ai_result = self.ai_engine.classify_naker(truncated)
+                            
+                            # Validasi apakah AI Engine menembak kosong
+                            if not ai_result or not isinstance(ai_result, dict):
+                                raise ValueError("AI Engine mengembalikan Null/Bukan Dictionary")
+                                
+                        except Exception as ai_error:
+                            print(f"     [WARNING] Ollama Offline/Timeout: {ai_error}")
+                            # Injeksi data cadangan agar pipeline berlanjut dengan aman
+                            ai_result = {
+                                "status_geografi": "Error: Ollama Offline",
+                                "ringkasan_berita": "Gagal diekstrak karena Ollama Offline",
+                                "dampak_bekerja": "3 Tetap",
+                                "dampak_pengangguran": "3 Tetap",
+                                "kategori_kbli": "Unknown",
+                                "confidence_score": 0
+                            }
                         
                         # LOG ISOLATED (Lengkap dengan kotak)
                         self._print_isolated_log(site, parsed.get("title", ""), url, score, ai_result)

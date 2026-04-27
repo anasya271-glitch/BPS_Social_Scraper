@@ -22,7 +22,7 @@ PRIMARY_KEYWORDS = [
     r"\bPHK", r"\bpemutusan[\s\-]?hubungan[\s\-]?kerja", r"\bupah[\s\-]?minimum", r"\bUMK", r"\bUMP", r"\bUMR",
     r"\bburuh", r"\bserikat[\s\-]?pekerja", r"\bBPJS[\s\-]?Ketenagakerjaan", r"\bDisnaker",
     r"\bDinas[\s\-]?Tenaga[\s\-]?Kerja", r"\bTPK", r"\bTingkat[\s\-]?Pengangguran[\s\-]?Terbuka", r"\bTPAK",
-    r"\bpadat[\s\-]?karya", r"\outsourcing", r"\bkontrak[\s\-]?kerja", r"\bmagang", r"\bpelatihan[\s\-]?kerja",
+    r"\bpadat[\s\-]?karya", r"\bout[\s\-]?sourcing", r"\bkontrak[\s\-]?kerja", r"\bmagang", r"\bpelatihan[\s\-]?kerja",
     r"\bangkatan[\s\-]?kerja", r"\binformal", r"\bBLK", r"\bBalai[\s\-]?Latihan[\s\-]?Kerja",
 ]
 
@@ -687,9 +687,15 @@ class RelevanceScorer:
         
         def check_smart_keywords(kws):
             for kw in kws:
+                # Pastikan kw adalah string untuk menghindari error lain
+                if not isinstance(kw, str): continue
                 smart_kw = kw.replace(" ", r"[\s\-]?")
-                if re.search(smart_kw, combined):
-                    return True
+                try:
+                    if re.search(smart_kw, combined):
+                        return True
+                except re.error as e:
+                    # Abaikan kata kunci yang memiliki syntax Regex rusak (misal: \o) dan lanjutkan ke kata berikutnya
+                    pass
             return False
             
         # Penambahan leksikon krusial

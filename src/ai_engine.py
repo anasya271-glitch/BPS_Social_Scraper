@@ -79,7 +79,7 @@ Output: {{"status_geografi": "Irrelevant", "ringkasan_berita": "Informasi teknis
 SEKARANG ANALISIS TEKS BERIKUT:
 {article_text}
 """
-        return self._execute_query("bps-naker", v66_prompt)
+        return self._execute_query("naker", v66_prompt)
 
     def interrogate_lnprt(self, text):
         return self._interrogate_model(self.models["lnprt"], text)
